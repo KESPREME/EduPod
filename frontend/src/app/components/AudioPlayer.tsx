@@ -73,7 +73,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, metadata }) => {
     };
 
     return (
-        <div className="mt-12 w-full max-w-4xl mx-auto bg-white border-swiss p-8 shadow-swiss">
+        <div className="mt-12 w-full max-w-4xl mx-auto bg-[var(--bg-card)] border-2 border-[var(--border-main)] p-8 shadow-[var(--shadow-block)]">
             <audio
                 ref={audioRef}
                 src={url}
@@ -84,7 +84,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, metadata }) => {
             {/* Talking Avatars Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                 {/* Professor Card */}
-                <div className={`p-6 border-swiss transition-all duration-300 ${activeSpeaker === 'host_1' ? 'bg-accent-blue text-white shadow-swiss translate-x-[-2px] translate-y-[-2px]' : 'bg-[#f0f0f0]'}`}>
+                <div className={`p-6 border-2 border-[var(--border-main)] transition-all duration-300 ${activeSpeaker === 'host_1' ? 'bg-accent-blue text-white shadow-[var(--shadow-block)] translate-x-[-2px] translate-y-[-2px]' : 'bg-[var(--bg-main)] text-[var(--text-main)]'}`}>
                     <div className="flex items-center space-x-4">
                         <motion.div
                             animate={activeSpeaker === 'host_1' ? { scale: [1, 1.15, 1], rotate: [0, 2, -2, 0] } : {}}
@@ -120,7 +120,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, metadata }) => {
                 </div>
 
                 {/* Student Card */}
-                <div className={`p-6 border-swiss transition-all duration-300 ${activeSpeaker === 'host_2' ? 'bg-accent-orange text-white shadow-swiss translate-x-[-2px] translate-y-[-2px]' : 'bg-[#f0f0f0]'}`}>
+                <div className={`p-6 border-2 border-[var(--border-main)] transition-all duration-300 ${activeSpeaker === 'host_2' ? 'bg-accent-orange text-white shadow-[var(--shadow-block)] translate-x-[-2px] translate-y-[-2px]' : 'bg-[var(--bg-main)] text-[var(--text-main)]'}`}>
                     <div className="flex items-center space-x-4">
                         <motion.div
                             animate={activeSpeaker === 'host_2' ? { scale: [1, 1.15, 1], rotate: [0, -2, 2, 0] } : {}}
@@ -158,16 +158,16 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, metadata }) => {
 
             <div className="flex flex-col space-y-8">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-4xl font-black uppercase tracking-tighter italic">Podcast Feed</h2>
+                    <h2 className="text-4xl font-black uppercase tracking-tighter italic text-[var(--text-main)]">Podcast Feed</h2>
                     <div className="flex items-center space-x-4">
                         <div className="flex space-x-1">
                             {[1, 2, 3, 4].map(i => <div key={i} className={`w-3 h-3 border-black border ${i % 2 === 0 ? 'bg-accent-orange' : 'bg-accent-blue'}`}></div>)}
                         </div>
-                        <Volume2 className="w-6 h-6" />
+                        <Volume2 className="w-6 h-6 text-[var(--text-main)]" />
                     </div>
                 </div>
 
-                <div className="relative w-full h-8 bg-[#f0f0f0] border-swiss cursor-pointer group"
+                <div className="relative w-full h-8 bg-[var(--bg-main)] border-2 border-[var(--border-main)] cursor-pointer group"
                     onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = e.clientX - rect.left;
@@ -175,7 +175,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, metadata }) => {
                         if (audioRef.current) audioRef.current.currentTime = percent * audioRef.current.duration;
                     }}>
                     <div
-                        className="absolute top-0 left-0 h-full bg-black transition-all duration-100"
+                        className="absolute top-0 left-0 h-full bg-[var(--text-main)] transition-all duration-100"
                         style={{ width: `${progress}%` }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-xs font-black uppercase mix-blend-difference text-white opacity-0 group-hover:opacity-100 transition-opacity">
@@ -186,7 +186,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, metadata }) => {
                 <div className="grid grid-cols-2 gap-6">
                     <button
                         onClick={togglePlay}
-                        className="flex items-center justify-center space-x-4 py-6 bg-black text-white border-4 border-black hover:bg-black/90 transition-all shadow-swiss active:translate-x-[2px] active:translate-y-[2px] active:shadow-none font-black text-2xl uppercase tracking-widest"
+                        className="flex items-center justify-center space-x-4 py-6 bg-[var(--text-main)] text-[var(--bg-card)] border-4 border-[var(--border-main)] hover:opacity-90 transition-all shadow-[var(--shadow-block)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none font-black text-2xl uppercase tracking-widest"
                     >
                         {isPlaying ? <Pause className="w-10 h-10" /> : <Play className="w-10 h-10" />}
                         <span>{isPlaying ? "Pause" : "Play Now"}</span>
@@ -195,13 +195,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, metadata }) => {
                     <div className="flex gap-4">
                         <button
                             onClick={reset}
-                            className="flex-1 flex items-center justify-center border-swiss p-4 bg-white shadow-swiss hover:bg-[#fafafa] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                            className="flex-1 flex items-center justify-center border-2 border-[var(--border-main)] p-4 bg-[var(--bg-card)] shadow-[var(--shadow-block)] hover:bg-[var(--bg-main)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none text-[var(--text-main)]"
                         >
                             <RotateCcw className="w-10 h-10" />
                         </button>
                         <button
                             onClick={handleDownload}
-                            className="flex-1 flex items-center justify-center bg-accent-orange text-white border-swiss p-4 shadow-swiss hover:bg-[#e62e00] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                            className="flex-1 flex items-center justify-center bg-accent-orange text-white border-2 border-[var(--border-main)] p-4 shadow-[var(--shadow-block)] hover:bg-[#e62e00] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
                         >
                             <Download className="w-10 h-10" />
                         </button>

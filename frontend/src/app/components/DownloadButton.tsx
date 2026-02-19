@@ -65,12 +65,12 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ jobId, audioUrl }) => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full right-0 mt-2 w-56 bg-white border-2 border-black shadow-[4px_4px_0px_black] z-50 overflow-hidden"
+                        className="absolute top-full right-0 mt-2 w-56 bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[var(--shadow-block)] z-50 overflow-hidden"
                     >
                         <div className="flex flex-col">
                             <button
                                 onClick={handleDownloadAudio}
-                                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors text-left border-b border-gray-100"
+                                className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-main)] transition-colors text-left border-b border-[var(--border-main)] text-[var(--text-main)]"
                             >
                                 <FileAudio size={18} className="text-[var(--secondary)]" />
                                 <span className="font-bold text-sm uppercase">Audio (MP3)</span>
@@ -79,7 +79,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ jobId, audioUrl }) => {
                             <button
                                 onClick={handleDownloadVideo}
                                 disabled={isGeneratingVideo}
-                                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-main)] transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text-main)]"
                             >
                                 {isGeneratingVideo ? (
                                     <Loader2 size={18} className="animate-spin text-[var(--accent)]" />

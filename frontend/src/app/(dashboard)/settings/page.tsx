@@ -98,27 +98,16 @@ export default function SettingsPage() {
             <SettingsSection title="Audio Generation" icon={ToggleRight}>
                 <div className="space-y-4">
                     <p className="font-bold mb-2">Text-to-Speech Engine</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
-                            onClick={() => updatePreferences({ ttsProvider: 'chatterbox' })}
-                            className={`p-4 border-2 rounded-lg text-left transition-all ${preferences.ttsProvider === 'chatterbox'
+                            onClick={() => updatePreferences({ ttsProvider: 'azure' })}
+                            className={`p-4 border-2 rounded-lg text-left transition-all ${preferences.ttsProvider === 'azure'
                                 ? "border-[var(--secondary)] bg-[var(--secondary)] text-white shadow-[4px_4px_0px_0px_var(--text-main)]"
                                 : "border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)]"
                                 }`}
                         >
-                            <div className="font-black uppercase">Chatterbox ⚡</div>
-                            <div className="text-xs opacity-80 mt-1">Colab T4. Low latency. Voice cloning.</div>
-                        </button>
-
-                        <button
-                            onClick={() => updatePreferences({ ttsProvider: 'melo' })}
-                            className={`p-4 border-2 rounded-lg text-left transition-all ${preferences.ttsProvider === 'melo'
-                                ? "border-[var(--secondary)] bg-[var(--secondary)] text-white shadow-[4px_4px_0px_0px_var(--text-main)]"
-                                : "border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)]"
-                                }`}
-                        >
-                            <div className="font-black uppercase">MeloTTS (CPU)</div>
-                            <div className="text-xs opacity-80 mt-1">Fast multilingual. EN, ES, FR, ZH, JP, KR.</div>
+                            <div className="font-black uppercase">Azure Neural TTS 🎭</div>
+                            <div className="text-xs opacity-80 mt-1">Emotional, expressive voices with SSML. Premium quality.</div>
                         </button>
 
                         <button
@@ -128,8 +117,8 @@ export default function SettingsPage() {
                                 : "border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)]"
                                 }`}
                         >
-                            <div className="font-black uppercase">Edge TTS (Cloud)</div>
-                            <div className="text-xs opacity-80 mt-1">Microsoft cloud. Fast, reliable.</div>
+                            <div className="font-black uppercase">Edge TTS (Cloud) ☁️</div>
+                            <div className="text-xs opacity-80 mt-1">Microsoft cloud. Fast, reliable, free.</div>
                         </button>
                     </div>
                 </div>

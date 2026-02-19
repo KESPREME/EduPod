@@ -1,14 +1,10 @@
 fastapi
 uvicorn
 python-multipart
-google-generativeai
 pydub
 edge-tts
-pymupdf
-aiofiles
-langchain-community
-langchain-ollama
-langchain-text-splitters
 pypdf
-nltk
 httpx
+openai
+python-dotenv
+azure-cognitiveservices-speech

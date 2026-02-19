@@ -6,30 +6,42 @@ import os
 import uuid
 import asyncio
 import json
-import gc
 from pydantic import BaseModel
 from typing import List, Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 from processor import process_pdf, generate_script, generate_quiz, generate_flashcards, generate_notes, ask_tutor
 from synth import synthesize_podcast, generate_video_from_audio
 
-# Try to import torch for GPU memory cleanup (optional)
-try:
-    import torch
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
 
 class AskTutorRequest(BaseModel):
     job_id: str
     question: str
     history: List[List[str]] = []
 
-app = FastAPI()
+app = FastAPI(
+    title="EduPod API",
+    description="Transform PDFs into immersive audio learning experiences",
+    version="3.0.0",
+)
 
-# CORS Configuration
+# CORS Configuration — supports env-based frontend URL
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    FRONTEND_URL,
+]
+# Also allow any Vercel preview deployments
+if "vercel.app" not in FRONTEND_URL:
+    allowed_origins.append("https://*.vercel.app")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,7 +61,7 @@ def load_jobs():
         try:
             with open(JOBS_FILE, "r") as f:
                 return json.load(f)
-        except:
+        except Exception:
             return {}
     return {}
 
@@ -82,13 +94,23 @@ LANGUAGE_VOICES = {
 
 @app.get("/")
 async def root():
-    return {"message": "EduPod API V2 is running"}
+    return {
+        "message": "EduPod API V3 is running",
+        "version": "3.0.0",
+        "llm": "Step 3.5 Flash (OpenRouter)",
+        "tts": "Azure Neural TTS + Edge TTS fallback",
+    }
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for deployment monitoring."""
+    return {"status": "healthy"}
 
 @app.post("/upload")
 async def upload_pdf(
     file: UploadFile = File(...),
     language: str = Form(default="en"),
-    tts_provider: str = Form(default="chatterbox")
+    tts_provider: str = Form(default="azure")
 ):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
@@ -125,10 +147,9 @@ async def process_job(job_id: str, file_path: str, language: str, voices: dict, 
         script = generate_script(text, language, tts_provider)
         update_job(job_id, {"script": script})
         
-        # Parallel generation of aux learning materials
+        # Generate auxiliary learning materials
         update_job(job_id, {"status": "Generating quiz, flashcards & notes..."})
         
-        # We run these while TTS is warming up/processing or just sequentially
         quiz_data = generate_quiz(script)
         flashcards_data = generate_flashcards(text)
         notes_data = generate_notes(text)
@@ -146,37 +167,13 @@ async def process_job(job_id: str, file_path: str, language: str, voices: dict, 
             "notes": notes_data
         })
         
-        # ===== MEMORY CLEANUP =====
-        await cleanup_memory(job_id)
+        print(f"✅ Job {job_id[:8]} completed successfully!")
         
     except Exception as e:
         update_job(job_id, {"status": f"Error: {str(e)}"})
-        print(f"Error processing job {job_id}: {e}")
-        # Still try to cleanup on error
-        await cleanup_memory(job_id)
-
-async def cleanup_memory(job_id: str):
-    """
-    Cleans up RAM and GPU memory after job processing.
-    - Runs Python garbage collector
-    - Clears PyTorch CUDA cache if available
-    - Logs stabilization
-    """
-    print(f"🧹 [Job {job_id[:8]}] Starting memory cleanup...")
-    
-    # Force garbage collection
-    collected = gc.collect()
-    print(f"   ↳ GC collected {collected} objects")
-    
-    # Clear GPU memory if PyTorch with CUDA is available
-    if HAS_TORCH and torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        torch.cuda.synchronize()
-        print(f"   ↳ CUDA cache cleared")
-    
-    # Give the system a moment to stabilize
-    await asyncio.sleep(0.5)
-    print(f"✅ [Job {job_id[:8]}] Memory cleanup complete. System stabilized.")
+        print(f"❌ Error processing job {job_id}: {e}")
+        import traceback
+        traceback.print_exc()
 
 @app.get("/status/{job_id}")
 async def get_status(job_id: str):
@@ -187,11 +184,10 @@ async def get_status(job_id: str):
     # Check if audio file exists (job completed before restart)
     output_file = os.path.join(OUTPUT_DIR, f"{job_id}.mp3")
     if os.path.exists(output_file):
-        # Reconstruct minimal job data
         return {
             "status": "Completed",
             "output_url": f"/download/{job_id}",
-            "metadata": []  # Metadata lost but audio exists
+            "metadata": []
         }
     
     raise HTTPException(status_code=404, detail="Job not found")
@@ -218,14 +214,9 @@ async def get_quiz(job_id: str):
     if "script" not in jobs[job_id]:
         raise HTTPException(status_code=400, detail="Script not ready yet")
     
-    # Generate quiz from script
     script = jobs[job_id]["script"]
     quiz = generate_quiz(script)
     return {"quiz": quiz}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8005, reload=True)
 
 @app.post("/generate_video/{job_id}")
 async def create_video(job_id: str, background_tasks: BackgroundTasks):
@@ -240,22 +231,11 @@ async def create_video(job_id: str, background_tasks: BackgroundTasks):
     output_mp3 = os.path.join(OUTPUT_DIR, f"{job_id}.mp3")
     output_mp4 = os.path.join(OUTPUT_DIR, f"{job_id}.mp4")
     
-    # Use cover image if available, else try to find one or None
-    # For now, we'll try to find a cover image or use a default
-    # If we had a cover_image in job metadata we'd use it.
-    # Simple logic: check if job_id.png exists in uploads (if user uploaded cover?) 
-    # Or just use None -> black background.
     cover_image = None
     
-    # Check if video already exists
     if os.path.exists(output_mp4):
         return {"status": "Video already exists", "url": f"/download_video/{job_id}"}
 
-    # Run generation synchronously (ffmpeg is fast for still images) or background?
-    # It might take 10-20s. Let's do it in background or await if fast.
-    # Actually, let's do it synchronously because the user is waiting for "Download" 
-    # But usually browser waits.
-    
     success = generate_video_from_audio(output_mp3, cover_image, output_mp4)
     
     if not success:
@@ -277,10 +257,13 @@ async def ask_tutor_endpoint(req: AskTutorRequest):
         
     job = jobs[req.job_id]
     
-    # Get context (use script if available, else generic info)
     context = job.get("script", "")
     if not context:
         context = "The user is asking about a document they uploaded but the script hasn't been generated yet."
         
     answer = ask_tutor(context, req.question, req.history)
     return {"answer": answer}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8005, reload=True)

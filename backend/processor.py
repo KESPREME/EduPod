@@ -1,8 +1,11 @@
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import OllamaLLM
+"""
+Processor Module — PDF ingestion, script/quiz/flashcard/notes/tutor generation.
+Uses OpenRouter (Step 3.5 Flash) via llm_provider for all LLM calls.
+"""
 import os
 import json
+from pypdf import PdfReader
+from llm_provider import invoke_llm, invoke_llm_json
 
 # Language prompts for multi-language support
 LANGUAGE_PROMPTS = {
@@ -14,75 +17,53 @@ LANGUAGE_PROMPTS = {
     "zh": "Generate the script in Mandarin Chinese (用中文).",
 }
 
-# ============ MEMORY OPTIMIZATION ============
-# Cache LLM instances to avoid repeated model loading
-# keep_alive="5m" auto-unloads model from GPU after 5 min idle
-_llm_cache = {}
 
-def get_llm(model_name: str, num_ctx: int = 4096):
+def process_pdf(pdf_path: str) -> str:
     """
-    Get or create a cached LLM instance with memory-optimized settings.
-    - Caches instances to prevent repeated model loading
-    - Uses keep_alive to auto-unload from GPU after idle
-    - Limits context window to reduce VRAM usage
-    """
-    if model_name not in _llm_cache:
-        _llm_cache[model_name] = OllamaLLM(
-            model=model_name,
-            num_ctx=num_ctx,
-            keep_alive="5m"  # Unload after 5 minutes of inactivity
-        )
-        print(f"🔧 Loaded LLM: {model_name} (keep_alive=5m)")
-    return _llm_cache[model_name]
-
-def process_pdf(pdf_path: str):
-    """
-    Ingests a PDF, splits it into chunks, and returns the first 3 chunks combined.
+    Ingests a PDF, extracts text from first pages, returns combined text.
+    Uses pypdf directly (no langchain dependency).
     """
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(f"PDF not found at {pdf_path}")
-        
-    loader = PyPDFLoader(pdf_path)
-    docs = loader.load()
     
-    # Split text to fit LLM context window efficiently
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=200)
-    splits = text_splitter.split_documents(docs)
+    reader = PdfReader(pdf_path)
     
-    # Process just the first 3 chunks to keep generation time reasonable and context safe
-    combined_text = " ".join([doc.page_content for doc in splits[:3]])
-    return combined_text
+    # Extract text from first 5 pages (enough for a good podcast)
+    pages_text = []
+    for i, page in enumerate(reader.pages[:5]):
+        text = page.extract_text()
+        if text:
+            pages_text.append(text)
+    
+    if not pages_text:
+        raise ValueError("Could not extract any text from the PDF.")
+    
+    # Combine and limit to ~8000 chars for context window safety
+    combined_text = " ".join(pages_text)
+    return combined_text[:8000]
 
-def generate_script(text: str, language: str = "en", tts_provider: str = "edge"):
+
+def generate_script(text: str, language: str = "en", tts_provider: str = "azure") -> str:
     """
     Generates a dialogue script between a Teacher (Host) and a Student (Guest).
     
     Args:
         text: The source text to convert to a podcast
         language: Output language code (en, hi, es, etc.)
-        tts_provider: TTS engine being used ('chatterbox', 'melo', 'edge')
-                      If 'chatterbox', adds emotional paralinguistic tags.
+        tts_provider: TTS engine being used ('azure' or 'edge')
     """
-    llm = get_llm("gemma3:4b", num_ctx=4096)
-    
     lang_instruction = LANGUAGE_PROMPTS.get(language, LANGUAGE_PROMPTS["en"])
     
-    # Chatterbox Turbo supports emotional tags in square brackets
-    if tts_provider == "chatterbox":
+    # Azure TTS HD voices auto-detect emotion from context, so we
+    # instruct the script to be naturally expressive without needing tags
+    if tts_provider == "azure":
         emotion_instruction = """
-    7. EMOTIONS & EXPRESSIONS: Add natural emotional expressions using these EXACT tags in square brackets:
-       - [laugh] - for genuine laughter
-       - [chuckle] - for light amusement
-       - [sigh] - for relief, frustration, or thoughtfulness
-       - [gasp] - for surprise or excitement
-       - [cough] - for clearing throat or emphasis
-       - [yawn] - sparingly, for tiredness
-       Place these naturally within dialogue, e.g.: "Well [chuckle], that's actually a great question!"
-       Use 2-4 emotional tags per speaker per conversation naturally."""
-        bracket_instruction = ""
+    7. EXPRESSIVENESS: Write with natural emotional variation - excitement for discoveries,
+       warmth for explanations, curiosity for questions. Azure TTS will auto-detect and
+       express these emotions from the text context. No special tags needed.
+    8. PAUSES: Use '...' for thoughtful pauses and '—' for dramatic emphasis."""
     else:
         emotion_instruction = ""
-        bracket_instruction = "6. NO BRACKETS: Do NOT use any expressions in brackets like (laughs), (sighs), [laugh], etc."
     
     prompt = f"""
     You are a professional podcast writer for a high-end educational series.
@@ -100,7 +81,7 @@ def generate_script(text: str, language: str = "en", tts_provider: str = "edge")
     3. DEPTH & LENGTH: At least 15-20 turns of dialogue.
     4. FLOW: Organic discussion, not Q&A. Use '...' for pauses.
     5. FORMAT: Each line MUST start with 'host_1:' or 'host_2:'.
-    {bracket_instruction}
+    6. NO BRACKETS: Do NOT use any expressions in brackets like (laughs), (sighs), [laugh], etc.
     {emotion_instruction}
     
     Technical Text:
@@ -109,15 +90,13 @@ def generate_script(text: str, language: str = "en", tts_provider: str = "edge")
     Podcast Script:
     """
     
-    response = llm.invoke(prompt)
-    return response
+    return invoke_llm(prompt, max_tokens=4096, temperature=0.8)
 
-def generate_quiz(script: str):
+
+def generate_quiz(script: str) -> list:
     """
     Generates multiple choice questions from the podcast script.
     """
-    llm = get_llm("gemma3:4b", num_ctx=2048)  # Smaller context for quizzes
-    
     prompt = f"""
     Based on the following podcast script, generate 5 multiple choice questions to test understanding.
     
@@ -134,23 +113,22 @@ def generate_quiz(script: str):
     Only output the JSON array, nothing else.
     
     Podcast Script:
-    {script[:2000]}
+    {script[:3000]}
     
     Quiz Questions (JSON):
     """
     
-    response = llm.invoke(prompt)
+    response = invoke_llm_json(prompt)
     
     # Try to parse JSON, fallback to empty list
     try:
-        # Find JSON array in response
         start_idx = response.find('[')
         end_idx = response.rfind(']') + 1
         if start_idx != -1 and end_idx > start_idx:
             json_str = response[start_idx:end_idx]
             quiz = json.loads(json_str)
             return quiz
-    except:
+    except Exception:
         pass
     
     # Fallback quiz if parsing fails
@@ -163,12 +141,11 @@ def generate_quiz(script: str):
         }
     ]
 
-def generate_flashcards(text: str):
+
+def generate_flashcards(text: str) -> list:
     """
     Generates flashcards (Term/Definition) from the text.
     """
-    llm = get_llm("gemma3:4b", num_ctx=2048)
-    
     prompt = f"""
     Extract 8 key terms and their definitions from the text below for study flashcards.
     
@@ -183,26 +160,25 @@ def generate_flashcards(text: str):
     Only output the JSON array.
     
     Text:
-    {text[:3000]}
+    {text[:4000]}
     
     Flashcards (JSON):
     """
     
-    response = llm.invoke(prompt)
+    response = invoke_llm_json(prompt)
     
     try:
         start_idx = response.find('[')
         end_idx = response.rfind(']') + 1
         return json.loads(response[start_idx:end_idx])
-    except:
+    except Exception:
         return [{"term": "Error", "definition": "Could not generate flashcards."}]
 
-def generate_notes(text: str):
+
+def generate_notes(text: str) -> str:
     """
     Generates structured study notes from the text.
     """
-    llm = get_llm("gemma3:4b", num_ctx=4096)
-    
     prompt = f"""
     Create structured study notes from the following text.
     Use Markdown formatting.
@@ -213,26 +189,25 @@ def generate_notes(text: str):
     4. 💡 **Takeaway**: One practical application or insight.
     
     Text:
-    {text[:4000]}
+    {text[:5000]}
     
     Study Notes:
     """
-    return llm.invoke(prompt)
+    return invoke_llm(prompt, max_tokens=2048)
 
-def ask_tutor(context: str, question: str, history: list = []):
+
+def ask_tutor(context: str, question: str, history: list = []) -> str:
     """
     Real-time AI Tutor chat.
     """
-    llm = get_llm("gemma3:4b", num_ctx=4096)
-    
     # Simple history formatting
-    chat_hist = "\\n".join([f"Student: {h[0]}\\nTutor: {h[1]}" for h in history[-3:]])
+    chat_hist = "\n".join([f"Student: {h[0]}\nTutor: {h[1]}" for h in history[-3:]])
     
     prompt = f"""
     You are an AI Tutor helping a student understand a lesson.
     
     Reference Context:
-    {context[:3000]}
+    {context[:4000]}
     
     Recent Chat:
     {chat_hist}
@@ -242,7 +217,8 @@ def ask_tutor(context: str, question: str, history: list = []):
     Answer concisely and encouragingly. Use emojis occasionally.
     AI Tutor:
     """
-    return llm.invoke(prompt)
+    return invoke_llm(prompt, max_tokens=1024, temperature=0.6)
+
 
 if __name__ == "__main__":
     pass

@@ -41,7 +41,8 @@ const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
             // Build history for context
             const history = messages.slice(-6).map(m => [m.content, ""]); // Simple format adjustment
 
-            const res = await axios.post("http://localhost:8005/ask_tutor", {
+            const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
+            const res = await axios.post(`${BACKEND_URL}/ask_tutor`, {
                 job_id: jobId,
                 question: userMsg,
                 history: history

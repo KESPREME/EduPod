@@ -12,7 +12,7 @@ interface Preferences {
     darkMode: boolean;
     notifications: boolean;
     emailDigest: boolean;
-    ttsProvider: 'chatterbox' | 'melo' | 'edge';
+    ttsProvider: 'azure' | 'edge';
 }
 
 interface SettingsContextType {
@@ -36,7 +36,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         darkMode: false,
         notifications: true,
         emailDigest: false,
-        ttsProvider: 'chatterbox' // Default to Chatterbox TTS (Colab T4)
+        ttsProvider: 'azure' // Default to Azure Neural TTS
     });
 
     // Load from LocalStorage on mount

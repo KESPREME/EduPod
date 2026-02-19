@@ -19,7 +19,7 @@ import QuizCard from "../../../components/QuizCard";
 import NotesView from "../../../components/NotesView";
 import AITutor from "../../../components/AITutor";
 
-const BACKEND_URL = "http://localhost:8005";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
 
 export default function LessonPage() {
     const params = useParams();

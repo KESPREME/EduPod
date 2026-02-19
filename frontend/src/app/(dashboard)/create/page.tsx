@@ -7,7 +7,7 @@ import axios from "axios";
 import { ChevronLeft } from "lucide-react";
 import { useSettings } from "../../context/SettingsContext";
 
-const BACKEND_URL = "http://localhost:8005"; // Revert to 8005
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
 
 export default function CreateLessonPage() {
     const router = useRouter();

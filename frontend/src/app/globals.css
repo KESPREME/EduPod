@@ -1,0 +1,398 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Light Mode (Safe & High Contrast) */
+  --bg-main: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
+  --text-main: #111111;
+  --text-muted: #444444;
+  --border-main: #000000;
+
+  --primary: #FFDE59;
+  /* Bright Yellow */
+  --secondary: #5E17EB;
+  /* Deep Blue */
+  --accent: #FF4D4D;
+  /* Red */
+
+  --text-on-primary: #000000;
+  --text-on-secondary: #ffffff;
+
+  --shadow-color: rgba(0, 0, 0, 1);
+  --shadow-block: 4px 4px 0px 0px var(--shadow-color);
+  --shadow-block-hover: 6px 6px 0px 0px var(--shadow-color);
+  --shadow-block-sm: 2px 2px 0px 0px var(--shadow-color);
+
+  --glow-color: transparent;
+}
+
+[data-theme='dark'] {
+  /* Dark Neon Mode (Cyberpunk & High Contrast) */
+  --bg-main: #000000;
+  --bg-card: #000000;
+  --bg-sidebar: #000000;
+  --text-main: #ffffff;
+  --text-muted: #a0a0a0;
+  --border-main: #ffffff;
+
+  --primary: #FFFF00;
+  /* Neon Yellow */
+  --secondary: #00FFFF;
+  /* Neon Cyan */
+  --accent: #FF00FF;
+  /* Neon Magenta */
+
+  --text-on-primary: #000000;
+  --text-on-secondary: #000000;
+
+  --shadow-color: rgba(255, 255, 255, 1);
+  --glow-color: rgba(255, 255, 255, 0.4);
+}
+
+@theme inline {
+  --color-background: var(--bg-main);
+  --color-foreground: var(--text-main);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-surface: var(--bg-card);
+  --color-muted: var(--text-muted);
+
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  /* Cyberpunk Grid Background for Dark Mode - Subtle */
+  background-image: radial-gradient(var(--text-muted) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary);
+  }
+
+  .box-glow {
+    box-shadow: 0 0 15px var(--glow-color), inset 0 0 10px var(--glow-color);
+  }
+
+  .card-swiss {
+    @apply border-2 border-[var(--border-main)] shadow-[var(--shadow-block)] transition-all duration-300;
+  }
+
+  [data-theme='dark'] .card-swiss:hover {
+    box-shadow: 6px 6px 0px 0px var(--primary), 0 0 15px var(--primary);
+    border-color: var(--primary);
+  }
+
+  .btn-neo {
+    @apply bg-[var(--primary)] text-black font-bold border-2 border-[var(--border-main)] px-4 py-2 shadow-[var(--shadow-block)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[var(--shadow-block-hover)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-[var(--shadow-block-sm)] transition-all cursor-pointer select-none uppercase tracking-tight;
+  }
+
+  [data-theme='dark'] .btn-neo:hover {
+    box-shadow: 6px 6px 0px 0px var(--secondary), 0 0 20px var(--secondary);
+  }
+
+  .btn-neo-secondary {
+    @apply bg-[var(--bg-card)] text-[var(--text-main)] font-bold border-2 border-[var(--border-main)] px-4 py-2 shadow-[var(--shadow-block)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[var(--shadow-block-hover)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-[var(--shadow-block-sm)] transition-all cursor-pointer select-none uppercase tracking-tight;
+  }
+
+  .input-neo {
+    @apply w-full bg-[var(--bg-card)] border-2 border-[var(--border-main)] p-3 font-medium outline-none text-[var(--text-main)] focus:shadow-[var(--shadow-block)] transition-all;
+  }
+
+  /* Cyberpunk Hover Glow */
+  .hover-glow {
+    @apply transition-all duration-200;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 15px var(--primary), inset 0 0 10px rgba(255, 255, 255, 0.2);
+    border-color: var(--primary);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-main);
+    border-left: 2px solid var(--border-main);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-main);
+  }
+}
+
+/* ===== CYBERPUNK ANIMATIONS ===== */
+
+/* Scanline Effect Overlay */
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.15) 2px,
+      rgba(0, 0, 0, 0.15) 4px);
+  z-index: 100;
+  opacity: 0.5;
+}
+
+/* Glitch Text Effect */
+@keyframes glitch {
+
+  0%,
+  100% {
+    transform: translate(0);
+    text-shadow: -2px 0 var(--accent), 2px 0 var(--secondary);
+  }
+
+  20% {
+    transform: translate(-2px, 2px);
+    text-shadow: 2px 0 var(--accent), -2px 0 var(--secondary);
+  }
+
+  40% {
+    transform: translate(-2px, -2px);
+    text-shadow: 2px 0 var(--secondary), -2px 0 var(--accent);
+  }
+
+  60% {
+    transform: translate(2px, 2px);
+    text-shadow: -2px 0 var(--secondary), 2px 0 var(--accent);
+  }
+
+  80% {
+    transform: translate(2px, -2px);
+    text-shadow: 0 0 var(--primary), 0 0 var(--primary);
+  }
+}
+
+.glitch-effect {
+  animation: glitch 0.4s ease-in-out infinite;
+}
+
+.glitch-hover:hover {
+  animation: glitch 0.3s ease-in-out;
+}
+
+/* Typewriter Cursor */
+@keyframes blink-cursor {
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink {
+  animation: blink-cursor 1s step-end infinite;
+}
+
+/* Neon Flicker */
+@keyframes neon-flicker {
+
+  0%,
+  19%,
+  21%,
+  23%,
+  25%,
+  54%,
+  56%,
+  100% {
+    text-shadow:
+      0 0 5px var(--primary),
+      0 0 10px var(--primary),
+      0 0 20px var(--primary),
+      0 0 40px var(--primary);
+  }
+
+  20%,
+  24%,
+  55% {
+    text-shadow: none;
+  }
+}
+
+.neon-text {
+  animation: neon-flicker 3s infinite;
+  color: var(--primary);
+}
+
+/* Pulsing Border */
+@keyframes pulse-border {
+
+  0%,
+  100% {
+    border-color: var(--primary);
+    box-shadow: 0 0 5px var(--primary);
+  }
+
+  50% {
+    border-color: var(--secondary);
+    box-shadow: 0 0 15px var(--secondary);
+  }
+}
+
+.pulse-border {
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+/* Loading Bar Animation */
+@keyframes loading-stripe {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 40px 0;
+  }
+}
+
+.loading-stripes {
+  background-image: repeating-linear-gradient(-45deg,
+      transparent,
+      transparent 10px,
+      rgba(0, 0, 0, 0.1) 10px,
+      rgba(0, 0, 0, 0.1) 20px);
+  background-size: 40px 40px;
+  animation: loading-stripe 1s linear infinite;
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* CRT Screen Glow */
+.crt-glow {
+  box-shadow:
+    inset 0 0 100px rgba(0, 0, 0, 0.5),
+    0 0 30px var(--primary);
+}
+
+/* Fade in up animation for cards */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+/* Shimmer Effect for Progress Bar */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+/* Loading Card Theme-Adaptive Styles */
+.loading-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-main);
+  box-shadow: 8px 8px 0 var(--border-main);
+}
+
+[data-theme='dark'] .loading-card {
+  background: #000;
+  border-color: var(--primary);
+  box-shadow: 12px 12px 0 var(--primary), 0 0 30px var(--primary);
+}
+
+/* Theme-specific scanlines */
+.loading-scanlines::before {
+  display: none;
+}
+
+[data-theme='dark'] .loading-scanlines::before {
+  display: block;
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.15) 2px,
+      rgba(0, 0, 0, 0.15) 4px);
+  z-index: 100;
+  opacity: 0.5;
+}
+
+/* Progress bar theme adaptations */
+.progress-track {
+  height: 1rem;
+  border-radius: 9999px;
+  background: var(--bg-main);
+  border: 2px solid var(--border-main);
+  overflow: hidden;
+}
+
+[data-theme='dark'] .progress-track {
+  height: 1.5rem;
+  border-radius: 0;
+  background: #111;
+  border-width: 1px;
+}
+
+/* Log area theme */
+.log-area {
+  background: var(--bg-main);
+  border: 2px solid var(--border-main);
+  border-radius: 0.5rem;
+}
+
+[data-theme='dark'] .log-area {
+  background: rgba(0, 0, 0, 0.8);
+  border-width: 1px;
+  border-radius: 0;
+}

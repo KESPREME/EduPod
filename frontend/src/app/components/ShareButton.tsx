@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Share2, Copy, Check, Twitter, Linkedin } from "lucide-react";
+import { Share2, Copy, Check, Linkedin } from "lucide-react";
 
 interface ShareButtonProps {
     jobId: string;
@@ -23,7 +23,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ jobId }) => {
     };
 
     const shareToTwitter = () => {
-        const text = encodeURIComponent("Check out this AI-generated podcast from EduPod! 🎧");
+        const text = encodeURIComponent("Check out this AI-generated podcast from EduPod!");
         window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(shareUrl)}`, '_blank');
     };
 
@@ -37,7 +37,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ jobId }) => {
                 onClick={() => setIsOpen(!isOpen)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center space-x-2 px-4 py-3 bg-accent-blue text-white font-black uppercase tracking-widest border-swiss shadow-swiss hover:bg-accent-blue/90 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                className="touch-target flex items-center space-x-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-accent-blue text-white font-black uppercase tracking-widest border-swiss shadow-swiss hover:bg-accent-blue/90 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
             >
                 <Share2 className="w-5 h-5" />
                 <span>Share</span>
@@ -47,7 +47,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ jobId }) => {
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute top-full left-0 mt-2 w-72 bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[var(--shadow-block)] p-4 z-50 text-[var(--text-main)]"
+                    className="absolute top-full right-0 sm:right-auto sm:left-0 mt-2 w-[min(18rem,calc(100vw-1.5rem))] sm:w-72 bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[var(--shadow-block)] p-3 sm:p-4 z-50 text-[var(--text-main)]"
                 >
                     <div className="text-xs font-black uppercase tracking-widest mb-3 text-[var(--text-muted)]">Share this podcast</div>
 
@@ -57,7 +57,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ jobId }) => {
                             type="text"
                             value={shareUrl}
                             readOnly
-                            className="flex-1 px-3 py-2 text-xs font-mono border-2 border-[var(--border-main)] bg-[var(--bg-main)] text-[var(--text-main)] outline-none focus:border-[var(--primary)] transition-colors"
+                            className="flex-1 min-w-0 px-2 sm:px-3 py-2 text-xs font-mono border-2 border-[var(--border-main)] bg-[var(--bg-main)] text-[var(--text-main)] outline-none focus:border-[var(--primary)] transition-colors"
                         />
                         <button
                             onClick={handleCopy}

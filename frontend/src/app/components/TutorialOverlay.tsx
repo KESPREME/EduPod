@@ -90,17 +90,17 @@ export default function TutorialOverlay() {
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4">
                 <motion.div
                     key={currentStep}
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: -20 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="w-full max-w-lg bg-[var(--bg-card)] border-4 border-[var(--border-main)] p-8 md:p-12 relative shadow-[16px_16px_0px_0px_var(--border-main)]"
+                    className="mobile-modal-shell w-full max-w-lg bg-[var(--bg-card)] border-4 border-[var(--border-main)] p-6 sm:p-8 md:p-12 relative shadow-[16px_16px_0px_0px_var(--border-main)]"
                 >
                     {/* Decorative Background Icon */}
-                    <div className="absolute -top-8 -right-8 w-24 h-24 border-4 border-[var(--border-main)] flex items-center justify-center rotate-12 bg-[var(--bg-main)] shadow-[8px_8px_0px_0px_var(--border-main)]" style={{ backgroundColor: step.color }}>
+                    <div className="hidden sm:flex absolute -top-8 -right-8 w-24 h-24 border-4 border-[var(--border-main)] items-center justify-center rotate-12 bg-[var(--bg-main)] shadow-[8px_8px_0px_0px_var(--border-main)]" style={{ backgroundColor: step.color }}>
                         <Icon size={48} className="text-black" />
                     </div>
 
@@ -115,12 +115,12 @@ export default function TutorialOverlay() {
                         ))}
                     </div>
 
-                    <h2 className="text-4xl font-black uppercase tracking-tighter mb-4 text-[var(--text-main)] leading-none">{step.title}</h2>
-                    <p className="text-xl font-medium text-[var(--text-muted)] mb-10 leading-relaxed border-l-4 border-[var(--border-main)] pl-4" style={{ borderColor: step.color }}>
+                    <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter mb-4 text-[var(--text-main)] leading-none">{step.title}</h2>
+                    <p className="text-base sm:text-xl font-medium text-[var(--text-muted)] mb-8 sm:mb-10 leading-relaxed border-l-4 border-[var(--border-main)] pl-4" style={{ borderColor: step.color }}>
                         {step.description}
                     </p>
 
-                    <div className="flex justify-between items-center mt-8 pt-6 border-t-2 border-dashed border-[var(--border-main)]">
+                    <div className="flex flex-col-reverse sm:flex-row justify-between sm:items-center gap-4 mt-8 pt-6 border-t-2 border-dashed border-[var(--border-main)]">
                         <button
                             onClick={completeTutorial}
                             className="font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
@@ -130,7 +130,7 @@ export default function TutorialOverlay() {
 
                         <button
                             onClick={handleNext}
-                            className="px-8 py-4 text-black font-black uppercase tracking-widest border-2 border-black shadow-[6px_6px_0px_0px_black] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_black] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_black] transition-all flex items-center gap-2"
+                            className="touch-target px-6 sm:px-8 py-3 sm:py-4 text-black font-black uppercase tracking-widest border-2 border-black shadow-[6px_6px_0px_0px_black] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_black] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_black] transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
                             style={{ backgroundColor: step.color }}
                         >
                             {currentStep === steps.length - 1 ? (

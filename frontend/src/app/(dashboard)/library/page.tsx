@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Play, Share2, Clock, FileText, Search, Plus, X, Layers, CheckCircle, BookOpen, GraduationCap, Copy, Check } from "lucide-react";
+import { Trash2, Play, Share2, Clock, Search, Plus, X, Layers, CheckCircle, BookOpen, GraduationCap, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Lesson {
@@ -14,17 +14,14 @@ interface Lesson {
 }
 
 export default function Library() {
-    const [lessons, setLessons] = useState<Lesson[]>([]);
+    const [lessons, setLessons] = useState<Lesson[]>(() => {
+        if (typeof window === "undefined") return [];
+        const saved = localStorage.getItem("edupod_lessons");
+        return saved ? JSON.parse(saved) : [];
+    });
     const [searchTerm, setSearchTerm] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const router = useRouter();
-
-    useEffect(() => {
-        const saved = localStorage.getItem("edupod_lessons");
-        if (saved) {
-            setLessons(JSON.parse(saved));
-        }
-    }, []);
 
     const handleDelete = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -101,30 +98,30 @@ export default function Library() {
     };
 
     return (
-        <div className="w-full max-w-7xl mx-auto space-y-12 pb-20">
+        <div className="responsive-container w-full max-w-7xl mx-auto space-y-8 sm:space-y-12 pb-16 sm:pb-20">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-4 border-[var(--border-main)] pb-8 mt-8">
                 <div>
-                    <h2 className="text-6xl font-black uppercase tracking-tighter text-[var(--text-main)] mb-2 relative inline-block">
+                    <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-tighter text-[var(--text-main)] mb-2 relative inline-block">
                         My Library
-                        <span className="absolute -top-8 -right-20 text-lg bg-[var(--accent)] text-white px-3 py-1 transform rotate-12 shadow-[4px_4px_0px_0px_black] z-10 tracking-normal whitespace-nowrap">
+                        <span className="hidden sm:block absolute -top-8 -right-20 text-lg bg-[var(--accent)] text-white px-3 py-1 transform rotate-12 shadow-[4px_4px_0px_0px_black] z-10 tracking-normal whitespace-nowrap">
                             {lessons.length}&nbsp;&nbsp;ITEMS
                         </span>
                     </h2>
-                    <p className="text-[var(--text-muted)] font-bold text-lg uppercase tracking-widest">
+                    <p className="text-[var(--text-muted)] font-bold text-sm sm:text-lg uppercase tracking-widest">
                         Your generated knowledge base
                     </p>
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-96 group">
+                    <div className="relative flex-1 w-full md:w-96 group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors z-10" />
                         <input
                             type="text"
                             placeholder="SEARCH ARCHIVES..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-[var(--bg-card)] border-4 border-[var(--border-main)] p-4 pl-14 font-black text-xl uppercase outline-none text-[var(--text-main)] shadow-[4px_4px_0px_0px_var(--border-main)] focus:shadow-[8px_8px_0px_0px_var(--primary)] focus:-translate-y-1 transition-all placeholder:text-gray-300"
+                            className="w-full bg-[var(--bg-card)] border-4 border-[var(--border-main)] p-3 sm:p-4 pl-12 sm:pl-14 font-black text-base sm:text-xl uppercase outline-none text-[var(--text-main)] shadow-[4px_4px_0px_0px_var(--border-main)] focus:shadow-[8px_8px_0px_0px_var(--primary)] focus:-translate-y-1 transition-all placeholder:text-gray-300"
                         />
                         {searchTerm && (
                             <button
@@ -140,23 +137,23 @@ export default function Library() {
 
             {/* Empty State */}
             {lessons.length === 0 ? (
-                <div className="w-full py-24 border-4 border-dashed border-[var(--text-muted)] rounded-3xl text-center bg-[var(--bg-card)]/50 dark:hover:border-[var(--secondary)] dark:hover:shadow-[0_0_20px_var(--secondary)] transition-all duration-300">
+                <div className="w-full py-16 sm:py-24 border-4 border-dashed border-[var(--text-muted)] rounded-3xl text-center bg-[var(--bg-card)]/50 dark:hover:border-[var(--secondary)] dark:hover:shadow-[0_0_20px_var(--secondary)] transition-all duration-300">
                     <div className="inline-block p-6 bg-[var(--bg-card)] border-4 border-[var(--border-main)] shadow-[8px_8px_0px_0px_var(--border-main)] rounded-full mb-8">
                         <GraduationCap className="w-16 h-16 text-[var(--primary)]" />
                     </div>
-                    <h3 className="text-4xl font-black uppercase tracking-tighter mb-4 text-[var(--text-main)]">Library Empty</h3>
-                    <p className="text-[var(--text-muted)] mb-10 font-bold text-xl uppercase tracking-widest max-w-md mx-auto">
+                    <h3 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter mb-4 text-[var(--text-main)]">Library Empty</h3>
+                    <p className="text-[var(--text-muted)] mb-8 sm:mb-10 font-bold text-base sm:text-xl uppercase tracking-widest max-w-md mx-auto">
                         Your learning journey begins here. Create your first lesson now.
                     </p>
                     <button
                         onClick={() => router.push('/create')}
-                        className="relative px-12 py-6 bg-[#FFFF00] text-black border-4 border-black font-black text-2xl uppercase tracking-widest 
+                        className="relative touch-target px-8 sm:px-12 py-4 sm:py-6 bg-[#FFFF00] text-black border-4 border-black font-black text-lg sm:text-2xl uppercase tracking-widest 
                         shadow-[8px_8px_0px_0px_#00FFFF] 
                         hover:translate-y-[-4px] hover:shadow-[12px_12px_0px_0px_#00FFFF,0_0_30px_#00FFFF] 
                         active:translate-y-[0px] active:shadow-[4px_4px_0px_0px_#00FFFF] 
                         transition-all flex items-center gap-3 mx-auto z-20 group"
                     >
-                        <Plus size={32} strokeWidth={4} />
+                        <Plus size={24} strokeWidth={4} />
                         <span>Create First Lesson</span>
 
                         {/* Glow element for exact replication of screenshot style */}
@@ -169,7 +166,7 @@ export default function Library() {
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8"
                 >
                     <AnimatePresence>
                         {filteredLessons.map((lesson) => (
@@ -181,7 +178,7 @@ export default function Library() {
                                 onClick={() => handleLessonSelect(lesson.id)}
                             >
                                 {/* Card Header / Preview */}
-                                <div className="h-48 bg-[var(--bg-main)] border-b-4 border-[var(--border-main)] relative overflow-hidden flex items-center justify-center p-6 group-hover:bg-[var(--primary)] transition-colors duration-300">
+                                <div className="h-40 sm:h-48 bg-[var(--bg-main)] border-b-4 border-[var(--border-main)] relative overflow-hidden flex items-center justify-center p-4 sm:p-6 group-hover:bg-[var(--primary)] transition-colors duration-300">
                                     <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_2px_2px,var(--text-muted)_1px,transparent_0)] bg-[size:20px_20px]"></div>
 
                                     <div className="z-10 text-center transform group-hover:scale-110 transition-transform duration-300">
@@ -213,9 +210,9 @@ export default function Library() {
                                 </div>
 
                                 {/* Card Body */}
-                                <div className="p-6 flex-grow flex flex-col">
+                                <div className="p-4 sm:p-6 flex-grow flex flex-col">
                                     <div className="flex justify-between items-start mb-4">
-                                        <h3 className="font-black uppercase tracking-tight text-2xl leading-7 text-[var(--text-main)] line-clamp-2 min-h-[3.5rem] group-hover:text-[var(--primary)] transition-colors">
+                                        <h3 className="font-black uppercase tracking-tight text-xl sm:text-2xl leading-6 sm:leading-7 text-[var(--text-main)] line-clamp-2 min-h-[3.5rem] group-hover:text-[var(--primary)] transition-colors">
                                             {lesson.title || `Untitled Lesson`}
                                         </h3>
                                     </div>

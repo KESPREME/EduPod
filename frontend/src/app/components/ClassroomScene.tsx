@@ -46,7 +46,7 @@ const ClassroomScene: React.FC<ClassroomSceneProps> = ({ metadata, currentTime, 
     }, [currentTime, metadata]);
 
     return (
-        <div className="w-full max-w-5xl mx-auto select-none">
+        <div className="relative w-full max-w-5xl mx-auto select-none">
             {/* Classroom Container */}
             <div
                 className="relative overflow-hidden"
@@ -85,7 +85,7 @@ const ClassroomScene: React.FC<ClassroomSceneProps> = ({ metadata, currentTime, 
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -8 }}
                                 transition={{ duration: 0.4 }}
-                                className="absolute inset-0 flex items-center justify-center p-6 md:p-10"
+                                className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 md:p-10"
                             >
                                 <p
                                     className="text-white/90 text-center leading-relaxed max-w-[90%]"
@@ -101,7 +101,7 @@ const ClassroomScene: React.FC<ClassroomSceneProps> = ({ metadata, currentTime, 
                         )}
                     </AnimatePresence>
 
-                    {/* EduPod label — small corner tag */}
+                    {/* EduPod label - small corner tag */}
                     <div className="absolute top-2 right-3 text-white/20 text-[10px] font-mono tracking-wider">
                         EduPod
                     </div>
@@ -151,12 +151,12 @@ const ClassroomScene: React.FC<ClassroomSceneProps> = ({ metadata, currentTime, 
                                 style={{ margin: '-8px' }}
                             />
                         )}
-                        <div className={`relative p-4 md:p-5 rounded-full transition-all duration-300 border-3 ${activeSpeaker === 'host_1'
+                        <div className={`relative p-2.5 sm:p-4 md:p-5 rounded-full transition-all duration-300 border-3 ${activeSpeaker === 'host_1'
                             ? 'bg-gradient-to-br from-blue-500 to-blue-700 border-blue-300 shadow-lg shadow-blue-500/40'
                             : 'bg-gradient-to-br from-gray-300 to-gray-400 border-gray-200'
                             }`}
                         >
-                            <GraduationCap className="w-10 h-10 md:w-14 md:h-14 text-white drop-shadow" />
+                            <GraduationCap className="w-7 h-7 sm:w-10 sm:h-10 md:w-14 md:h-14 text-white drop-shadow" />
 
                             {/* Sound waves */}
                             <AnimatePresence>
@@ -201,12 +201,12 @@ const ClassroomScene: React.FC<ClassroomSceneProps> = ({ metadata, currentTime, 
                                 style={{ margin: '-8px' }}
                             />
                         )}
-                        <div className={`relative p-4 md:p-5 rounded-full transition-all duration-300 border-3 ${activeSpeaker === 'host_2'
+                        <div className={`relative p-2.5 sm:p-4 md:p-5 rounded-full transition-all duration-300 border-3 ${activeSpeaker === 'host_2'
                             ? 'bg-gradient-to-br from-orange-500 to-red-600 border-orange-300 shadow-lg shadow-orange-500/40'
                             : 'bg-gradient-to-br from-gray-300 to-gray-400 border-gray-200'
                             }`}
                         >
-                            <UserCircle className="w-10 h-10 md:w-14 md:h-14 text-white drop-shadow" />
+                            <UserCircle className="w-7 h-7 sm:w-10 sm:h-10 md:w-14 md:h-14 text-white drop-shadow" />
 
                             <AnimatePresence>
                                 {activeSpeaker === 'host_2' && (
@@ -258,7 +258,7 @@ const ClassroomScene: React.FC<ClassroomSceneProps> = ({ metadata, currentTime, 
                         >
                             <BookOpen className="w-12 h-12 text-white/80 mx-auto mb-3" />
                         </motion.div>
-                        <span className="text-white font-black text-lg uppercase tracking-widest">
+                        <span className="text-white font-black text-sm sm:text-lg uppercase tracking-widest">
                             Press Play to Start
                         </span>
                     </div>

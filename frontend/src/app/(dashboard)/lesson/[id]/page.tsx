@@ -1,15 +1,15 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
+import dynamic from "next/dynamic";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Maximize, Minimize, Edit2, Check, Settings2, Subtitles, Play, Pause, User, GraduationCap, School, FileText, Layers, CheckCircle, BookOpen, Bot, Loader2 } from "lucide-react";
+import { ChevronLeft, Maximize, Minimize, Edit2, Check, Settings2, Subtitles, Play, Pause, FileText, Layers, CheckCircle, BookOpen, Bot, Loader2 } from "lucide-react";
 
 import StatusBadge from "../../../components/StatusBadge";
 import SeekBar from "../../../components/SeekBar";
 import PlaybackSpeed from "../../../components/PlaybackSpeed";
-import Classroom3DAdvanced from "../../../components/Classroom3DAdvanced";
 import ClassroomScene from "../../../components/ClassroomScene";
 import TranscriptView from "../../../components/TranscriptView";
 import ShareButton from "../../../components/ShareButton";
@@ -20,6 +20,30 @@ import NotesView from "../../../components/NotesView";
 import AITutor from "../../../components/AITutor";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
+const MOBILE_VIEW_PREF_KEY = "edupod_mobile_lesson_view";
+
+const Classroom3DAdvanced = dynamic(() => import("../../../components/Classroom3DAdvanced"), {
+    ssr: false,
+    loading: () => <div className="w-full aspect-video bg-black/80 animate-pulse" />,
+});
+
+interface TranscriptSegment {
+    host: "host_1" | "host_2";
+    content: string;
+    duration: number;
+}
+
+interface FlashcardItem {
+    term: string;
+    definition: string;
+}
+
+interface QuizQuestionItem {
+    question: string;
+    options: string[];
+    correct: string;
+    explanation: string;
+}
 
 export default function LessonPage() {
     const params = useParams();
@@ -35,9 +59,9 @@ export default function LessonPage() {
 
     // Status & Data
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
-    const [metadata, setMetadata] = useState<any[] | null>(null);
-    const [flashcards, setFlashcards] = useState<any[]>([]);
-    const [quiz, setQuiz] = useState<any[]>([]);
+    const [metadata, setMetadata] = useState<TranscriptSegment[] | null>(null);
+    const [flashcards, setFlashcards] = useState<FlashcardItem[]>([]);
+    const [quiz, setQuiz] = useState<QuizQuestionItem[]>([]);
     const [notes, setNotes] = useState<string>("");
 
     // Player State
@@ -45,6 +69,10 @@ export default function LessonPage() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [showTranscript, setShowTranscript] = useState(false);
     const [use3D, setUse3D] = useState(true);
+    const [isMobileViewport, setIsMobileViewport] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return window.innerWidth <= 640;
+    });
     const [duration, setDuration] = useState(0);
     const [theaterMode, setTheaterMode] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -54,7 +82,6 @@ export default function LessonPage() {
     const [isEditingTitle, setIsEditingTitle] = useState(false);
 
     const audioRef = useRef<HTMLAudioElement>(null);
-    const pollCount = useRef(0);
     const maxRetries = 5;
 
     // Scroll Locking
@@ -67,12 +94,41 @@ export default function LessonPage() {
         return () => { document.body.style.overflow = ""; };
     }, [theaterMode]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const syncViewport = () => {
+            setIsMobileViewport(window.innerWidth <= 640);
+        };
+
+        syncViewport();
+        window.addEventListener("resize", syncViewport);
+        return () => window.removeEventListener("resize", syncViewport);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        if (!isMobileViewport) {
+            setUse3D(true);
+            return;
+        }
+
+        const storedView = localStorage.getItem(MOBILE_VIEW_PREF_KEY);
+        setUse3D(storedView === "3d");
+    }, [isMobileViewport]);
+
+    useEffect(() => {
+        if (typeof window === "undefined" || !isMobileViewport) return;
+        localStorage.setItem(MOBILE_VIEW_PREF_KEY, use3D ? "3d" : "2d");
+    }, [use3D, isMobileViewport]);
+
     // Load Title
     useEffect(() => {
         const savedLessons = localStorage.getItem("edupod_lessons");
         if (savedLessons) {
-            const lessons = JSON.parse(savedLessons);
-            const currentLesson = lessons.find((l: any) => l.id === jobId);
+            const lessons = JSON.parse(savedLessons) as Array<{ id: string; title?: string }>;
+            const currentLesson = lessons.find((l) => l.id === jobId);
             if (currentLesson && currentLesson.title) setLessonTitle(currentLesson.title);
         }
     }, [jobId]);
@@ -81,8 +137,8 @@ export default function LessonPage() {
         setIsEditingTitle(false);
         const savedLessons = localStorage.getItem("edupod_lessons");
         if (savedLessons) {
-            const lessons = JSON.parse(savedLessons);
-            const updatedLessons = lessons.map((l: any) => {
+            const lessons = JSON.parse(savedLessons) as Array<{ id: string; title?: string }>;
+            const updatedLessons = lessons.map((l) => {
                 if (l.id === jobId) return { ...l, title: lessonTitle };
                 return l;
             });
@@ -92,7 +148,7 @@ export default function LessonPage() {
 
     // Robust Polling
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let intervalId: ReturnType<typeof setInterval> | null = null;
         let retries = 0;
 
         const fetchStatus = async () => {
@@ -116,18 +172,19 @@ export default function LessonPage() {
                     if (response.data.flashcards) setFlashcards(response.data.flashcards);
                     if (response.data.quiz) setQuiz(response.data.quiz);
                     if (response.data.notes) setNotes(response.data.notes);
-                    clearInterval(interval);
+                    if (intervalId) clearInterval(intervalId);
                 } else if (currentStatus.startsWith("Error")) {
                     setError(currentStatus);
-                    clearInterval(interval);
+                    if (intervalId) clearInterval(intervalId);
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("Status check failed", err);
+                const axiosErr = axios.isAxiosError(err) ? err : null;
 
                 // Handle 404 specifically (Job Not Found / Expired)
-                if (err.response && err.response.status === 404) {
+                if (axiosErr?.response?.status === 404) {
                     setError("Lesson not found or expired. Please upload again.");
-                    clearInterval(interval);
+                    if (intervalId) clearInterval(intervalId);
                     return;
                 }
 
@@ -135,14 +192,16 @@ export default function LessonPage() {
                 retries++;
                 if (retries > maxRetries) {
                     setError("Connection lost. Is the backend server running?");
-                    clearInterval(interval);
+                    if (intervalId) clearInterval(intervalId);
                 }
             }
         };
 
         fetchStatus(); // Initial call
-        interval = setInterval(fetchStatus, 3000); // 3s polling
-        return () => clearInterval(interval);
+        intervalId = setInterval(fetchStatus, 3000); // 3s polling
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
     }, [jobId]);
 
     // Active Speaker & Content
@@ -165,7 +224,7 @@ export default function LessonPage() {
 
     // --- RENDER HELPERS ---
     const PlayerControls = ({ minimal = false }) => (
-        <div className={`flex items-center gap-6 ${minimal ? "justify-center" : "justify-center mt-6"}`}>
+        <div className={`flex items-center gap-3 sm:gap-6 ${minimal ? "justify-center" : "justify-center mt-4 sm:mt-6"}`}>
             <PlaybackSpeed audioRef={audioRef as React.RefObject<HTMLAudioElement>} theaterMode={minimal} />
 
             {/* Play/Pause Button - onMouseDown for instant response, smooth opacity transition */}
@@ -176,9 +235,9 @@ export default function LessonPage() {
                     if (isPlaying) { audioRef.current?.pause(); setIsPlaying(false); }
                     else { audioRef.current?.play(); setIsPlaying(true); }
                 }}
-                className={`relative flex items-center justify-center rounded-full border-4 cursor-pointer select-none transition-opacity duration-150 ${minimal
-                    ? "w-16 h-16 bg-[var(--primary)] text-black border-black hover:opacity-80 active:opacity-60"
-                    : "w-20 h-20 bg-[var(--bg-card)] text-[var(--primary)] border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)] hover:opacity-80 active:opacity-60"
+                className={`touch-target relative flex items-center justify-center rounded-full border-4 cursor-pointer select-none transition-opacity duration-150 ${minimal
+                    ? "w-14 h-14 sm:w-16 sm:h-16 bg-[var(--primary)] text-black border-black hover:opacity-80 active:opacity-60"
+                    : "w-16 h-16 sm:w-20 sm:h-20 bg-[var(--bg-card)] text-[var(--primary)] border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)] hover:opacity-80 active:opacity-60"
                     }`}
             >
                 {isPlaying ? <Pause size={minimal ? 32 : 40} fill="currentColor" /> : <Play size={minimal ? 32 : 40} fill="currentColor" className="ml-1" />}
@@ -191,11 +250,11 @@ export default function LessonPage() {
                     e.preventDefault();
                     setShowTranscript(!showTranscript);
                 }}
-                className={`flex items-center justify-center border-2 rounded-full cursor-pointer select-none transition-opacity duration-150 ${showTranscript
-                    ? "w-12 h-12 bg-[var(--primary)] text-black border-[var(--primary)] hover:opacity-80 active:opacity-60"
+                className={`touch-target flex items-center justify-center border-2 rounded-full cursor-pointer select-none transition-opacity duration-150 ${showTranscript
+                    ? "w-11 h-11 sm:w-12 sm:h-12 bg-[var(--primary)] text-black border-[var(--primary)] hover:opacity-80 active:opacity-60"
                     : minimal
-                        ? "w-12 h-12 bg-black/50 text-white border-white/50 hover:opacity-80 active:opacity-60"
-                        : "w-12 h-12 bg-[var(--bg-card)] text-[var(--text-main)] border-[var(--border-main)] shadow-[2px_2px_0px_0px_var(--border-main)] hover:opacity-80 active:opacity-60"
+                        ? "w-11 h-11 sm:w-12 sm:h-12 bg-black/50 text-white border-white/50 hover:opacity-80 active:opacity-60"
+                        : "w-11 h-11 sm:w-12 sm:h-12 bg-[var(--bg-card)] text-[var(--text-main)] border-[var(--border-main)] shadow-[2px_2px_0px_0px_var(--border-main)] hover:opacity-80 active:opacity-60"
                     }`}
                 title="Transcript"
             >
@@ -205,34 +264,34 @@ export default function LessonPage() {
     );
 
     return (
-        <div className={`${theaterMode ? "fixed inset-0 z-[100] bg-black flex flex-col" : "space-y-6"}`}>
+        <div className={`responsive-page ${theaterMode ? "fixed inset-0 z-[100] bg-black flex flex-col" : "space-y-4 sm:space-y-6"}`}>
 
             {/* --- HEADER (Standard) --- */}
             {!theaterMode && (
-                <div className="flex justify-between items-center bg-[var(--bg-card)] border-2 border-[var(--border-main)] p-4 card-swiss">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => router.back()} className="p-2 border-2 border-transparent hover:border-[var(--border-main)] hover:bg-[var(--bg-main)] rounded transition-all text-[var(--text-main)]">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-[var(--bg-card)] border-2 border-[var(--border-main)] p-3 sm:p-4 card-swiss">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+                        <button onClick={() => router.back()} className="touch-target p-2 border-2 border-transparent hover:border-[var(--border-main)] hover:bg-[var(--bg-main)] rounded transition-all text-[var(--text-main)] shrink-0">
                             <ChevronLeft size={20} />
                         </button>
-                        <div>
+                        <div className="min-w-0">
                             {isEditingTitle ? (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
                                     <input
                                         type="text"
                                         value={lessonTitle}
                                         onChange={(e) => setLessonTitle(e.target.value)}
-                                        className="input-neo text-xl font-black uppercase py-1 px-2 w-64 md:w-96"
+                                        className="input-neo text-base sm:text-xl font-black uppercase py-1 px-2 w-full sm:w-80 md:w-96"
                                         autoFocus
                                         onBlur={handleTitleSave}
                                         onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
                                     />
-                                    <button onClick={handleTitleSave} className="p-1 text-[var(--secondary)] hover:bg-[var(--bg-main)] rounded">
+                                    <button onClick={handleTitleSave} className="touch-target p-1 text-[var(--secondary)] hover:bg-[var(--bg-main)] rounded shrink-0">
                                         <Check size={20} />
                                     </button>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingTitle(true)}>
-                                    <h1 className="font-black uppercase tracking-tight text-xl leading-none text-[var(--text-main)] hover:text-[var(--primary)] transition-colors">
+                                <div className="flex items-center gap-2 group cursor-pointer min-w-0" onClick={() => setIsEditingTitle(true)}>
+                                    <h1 className="font-black uppercase tracking-tight text-base sm:text-xl leading-none text-[var(--text-main)] hover:text-[var(--primary)] transition-colors truncate">
                                         {lessonTitle}
                                     </h1>
                                     <Edit2 size={14} className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] transition-opacity" />
@@ -241,14 +300,14 @@ export default function LessonPage() {
                             <StatusBadge status={status} />
                         </div>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
                         {audioUrl && (
                             <>
                                 <ShareButton jobId={jobId} />
                                 <DownloadButton jobId={jobId} audioUrl={audioUrl} />
                             </>
                         )}
-                        <button onClick={() => setTheaterMode(true)} className="btn-neo-secondary flex items-center gap-2">
+                        <button onClick={() => setTheaterMode(true)} className="touch-target btn-neo-secondary flex items-center gap-2">
                             <Maximize size={16} />
                             <span className="hidden md:inline">Theater Mode</span>
                         </button>
@@ -263,20 +322,20 @@ export default function LessonPage() {
                         initial={{ y: -100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: -100, opacity: 0 }}
-                        className="fixed top-0 left-0 right-0 z-[110] p-6 flex justify-between items-start pointer-events-none"
+                        className="fixed top-0 left-0 right-0 z-[110] p-3 sm:p-6 flex justify-between items-start pointer-events-none gap-3"
                     >
-                        <div className="pointer-events-auto bg-black/50 backdrop-blur-md border border-white/20 px-4 py-2 rounded-lg">
+                        <div className="pointer-events-auto bg-black/50 backdrop-blur-md border border-white/20 px-3 sm:px-4 py-2 rounded-lg max-w-[70vw]">
                             <h2 className="text-white font-black uppercase tracking-widest text-sm flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
-                                {lessonTitle}
+                                <span className="truncate">{lessonTitle}</span>
                             </h2>
                         </div>
                         <button
                             onClick={() => setTheaterMode(false)}
-                            className="pointer-events-auto btn-neo bg-[var(--accent)] text-white border-white hover:bg-[var(--accent)] hover:text-white flex items-center gap-2 shadow-[0_0_15px_var(--accent)]"
+                            className="pointer-events-auto touch-target btn-neo bg-[var(--accent)] text-white border-white hover:bg-[var(--accent)] hover:text-white flex items-center gap-2 shadow-[0_0_15px_var(--accent)]"
                         >
                             <Minimize size={16} />
-                            <span>Exit Theater</span>
+                            <span className="hidden sm:inline">Exit Theater</span>
                         </button>
                     </motion.div>
                 )}
@@ -289,20 +348,20 @@ export default function LessonPage() {
                     {/* --- MAIN STAGE --- */}
                     <div className={`
                         relative transition-all duration-500 ease-in-out border-2 border-[var(--border-main)] overflow-hidden
-                        ${theaterMode ? "flex-1 w-full bg-black border-none" : "card-swiss bg-black p-2 min-h-[500px]"}
+                        ${theaterMode ? "flex-1 w-full bg-black border-none" : "card-swiss bg-black p-1.5 sm:p-2 min-h-[320px] sm:min-h-[500px]"}
                     `}>
                         {/* 3D/2D Toggle Overlay - Fixed Z-index */}
-                        <div className={`absolute z-[105] flex gap-2 ${theaterMode ? "top-24 right-8" : "top-4 right-4"}`}>
+                        <div className={`absolute z-[105] flex gap-2 ${theaterMode ? "top-20 sm:top-24 right-3 sm:right-8" : "top-3 sm:top-4 right-3 sm:right-4"}`}>
                             <div className="flex bg-black border-2 border-white rounded overflow-hidden shadow-[4px_4px_0px_rgba(0,0,0,0.5)]">
                                 <button
                                     onClick={() => setUse3D(true)}
-                                    className={`px-4 py-1.5 text-xs font-black uppercase transition-colors ${use3D ? 'bg-[var(--primary)] text-black' : 'text-white hover:bg-white/20'}`}
+                                    className={`touch-target px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-black uppercase transition-colors ${use3D ? 'bg-[var(--primary)] text-black' : 'text-white hover:bg-white/20'}`}
                                 >
                                     3D View
                                 </button>
                                 <button
                                     onClick={() => setUse3D(false)}
-                                    className={`px-4 py-1.5 text-xs font-black uppercase transition-colors ${!use3D ? 'bg-[var(--secondary)] text-white' : 'text-white hover:bg-white/20'}`}
+                                    className={`touch-target px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-black uppercase transition-colors ${!use3D ? 'bg-[var(--secondary)] text-white' : 'text-white hover:bg-white/20'}`}
                                 >
                                     2D View
                                 </button>
@@ -329,16 +388,16 @@ export default function LessonPage() {
                                         initial={{ y: 20, opacity: 0 }}
                                         animate={{ y: 0, opacity: 1 }}
                                         exit={{ y: 20, opacity: 0 }}
-                                        className="absolute bottom-8 left-1/2 -translate-x-1/2 w-3/4 max-w-2xl text-center z-[100] pointer-events-none"
+                                        className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-[92%] sm:w-3/4 max-w-2xl text-center z-[100] pointer-events-none"
                                     >
-                                        <div className="bg-black/70 backdrop-blur-md px-6 py-4 rounded-xl border border-white/20 shadow-2xl">
+                                        <div className="bg-black/70 backdrop-blur-md px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-white/20 shadow-2xl">
                                             <span className={`
                                                 inline-block text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm mb-2
                                                 ${activeSpeaker === 'host_1' ? 'bg-[#0066FF] text-white' : 'bg-[#FF3D00] text-white'}
                                             `}>
                                                 {activeSpeaker === 'host_1' ? 'Professor' : 'Student'}
                                             </span>
-                                            <p className="text-white text-lg font-medium leading-relaxed drop-shadow-md">
+                                            <p className="text-white text-sm sm:text-lg font-medium leading-relaxed drop-shadow-md">
                                                 {activeContent}
                                             </p>
                                         </div>
@@ -354,9 +413,9 @@ export default function LessonPage() {
                                     initial={{ y: 100, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
                                     exit={{ y: 100, opacity: 0 }}
-                                    className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t-2 border-[var(--primary)] p-6 z-[120] pb-8 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]"
+                                    className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t-2 border-[var(--primary)] p-3 sm:p-6 z-[120] pb-4 sm:pb-8 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]"
                                 >
-                                    <div className="max-w-4xl mx-auto space-y-6">
+                                    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
                                         <div className="w-full">
                                             <SeekBar currentTime={currentTime} duration={duration} onSeek={handleSeek} theaterMode={true} />
                                         </div>
@@ -382,7 +441,7 @@ export default function LessonPage() {
 
                     {/* --- STANDARD INFO DECK (Hidden in Theater) --- */}
                     {!theaterMode && (
-                        <div className="card-swiss p-6 bg-[var(--bg-card)] border-2 border-[var(--primary)] shadow-[8px_8px_0px_var(--primary)] text-[var(--text-main)]">
+                        <div className="card-swiss p-3 sm:p-6 bg-[var(--bg-card)] border-2 border-[var(--primary)] shadow-[8px_8px_0px_var(--primary)] text-[var(--text-main)]">
                             <SeekBar currentTime={currentTime} duration={duration} onSeek={handleSeek} />
                             <PlayerControls minimal={false} />
                         </div>
@@ -390,9 +449,9 @@ export default function LessonPage() {
 
                     {/* --- LEARNING DECK --- */}
                     {!theaterMode && (
-                        <div className="mt-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
                             {/* Tabs */}
-                            <div className="flex flex-wrap gap-3 pb-6">
+                            <div className="flex gap-2 sm:gap-3 pb-4 sm:pb-6 overflow-x-auto whitespace-nowrap pr-2">
                                 {[
                                     { id: "transcript", label: "Transcript", icon: <FileText size={18} /> },
                                     { id: "flashcards", label: "Flashcards", icon: <Layers size={18} /> },
@@ -404,7 +463,7 @@ export default function LessonPage() {
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={`
-                                            flex items-center gap-2 px-6 py-3 font-black uppercase tracking-widest transition-all border-2
+                                            touch-target flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 font-black uppercase tracking-widest transition-all border-2 shrink-0 text-xs sm:text-sm
                                             ${activeTab === tab.id
                                                 ? "bg-[var(--primary)] text-black border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)] -translate-y-1"
                                                 : "bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-main)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)] hover:shadow-[2px_2px_0px_0px_var(--border-main)]"}
@@ -417,9 +476,9 @@ export default function LessonPage() {
                             </div>
 
                             {/* Content Area */}
-                            <div className="min-h-[400px]">
+                            <div className="min-h-[280px] sm:min-h-[400px]">
                                 {activeTab === "transcript" && (
-                                    <div className="card-swiss bg-[var(--bg-card)] p-4 max-h-[600px] overflow-auto border-2 border-[var(--border-main)]">
+                                    <div className="card-swiss bg-[var(--bg-card)] p-3 sm:p-4 max-h-[70dvh] sm:max-h-[600px] overflow-auto border-2 border-[var(--border-main)]">
                                         <TranscriptView
                                             metadata={metadata}
                                             currentTime={currentTime}
@@ -428,7 +487,7 @@ export default function LessonPage() {
                                     </div>
                                 )}
                                 {activeTab === "flashcards" && (
-                                    <div className="py-8">
+                                    <div className="py-4 sm:py-8">
                                         {flashcards.length > 0 ? (
                                             <FlashcardDeck cards={flashcards} />
                                         ) : (
@@ -440,7 +499,7 @@ export default function LessonPage() {
                                     </div>
                                 )}
                                 {activeTab === "quiz" && (
-                                    <div className="py-8">
+                                    <div className="py-4 sm:py-8">
                                         {quiz.length > 0 ? (
                                             <QuizCard
                                                 questions={quiz}
@@ -467,13 +526,13 @@ export default function LessonPage() {
                 </motion.div>
             ) : (
                 /* Loading / Error State - Cyberpunk Terminal Style */
-                <div className="flex flex-col items-center justify-center min-h-[60vh] w-full max-w-3xl mx-auto px-6 font-mono">
+                <div className="flex flex-col items-center justify-center min-h-[60vh] w-full max-w-3xl mx-auto px-3 sm:px-6 font-mono">
                     {error ? (
-                        <div className="card-swiss bg-[#1a0000] border-2 border-[var(--accent)] p-8 text-center w-full shadow-[8px_8px_0px_var(--accent)]">
+                        <div className="card-swiss bg-[#1a0000] border-2 border-[var(--accent)] p-4 sm:p-8 text-center w-full shadow-[8px_8px_0px_var(--accent)]">
                             <div className="inline-block p-4 rounded-full bg-[var(--accent)] text-white mb-6 animate-pulse">
                                 <Settings2 className="w-12 h-12" />
                             </div>
-                            <h2 className="text-3xl font-black uppercase text-[var(--accent)] mb-4 tracking-widest glitch-effect">SYSTEM FAILURE</h2>
+                            <h2 className="text-2xl sm:text-3xl font-black uppercase text-[var(--accent)] mb-4 tracking-widest glitch-effect">SYSTEM FAILURE</h2>
                             <div className="bg-black/50 p-4 border border-[var(--accent)] mb-8 text-left font-mono text-sm text-[var(--accent)] overflow-auto max-h-32">
                                 <span className="opacity-50">{`> ERROR_CODE: 500`}<br /></span>
                                 <span className="opacity-50">{`> TIMESTAMP: ${new Date().toISOString()}`}<br /></span>
@@ -481,7 +540,7 @@ export default function LessonPage() {
                             </div>
                             <button
                                 onClick={() => router.push('/create')}
-                                className="w-full py-4 bg-[var(--accent)] text-white font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-[var(--shadow-block)] hover:shadow-[var(--shadow-block-hover)] border-2 border-white"
+                                className="touch-target w-full py-4 bg-[var(--accent)] text-white font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-[var(--shadow-block)] hover:shadow-[var(--shadow-block-hover)] border-2 border-white"
                             >
                                 REBOOT SYSTEM
                             </button>
@@ -506,7 +565,7 @@ export default function LessonPage() {
                                 </div>
 
                                 {/* Content Area */}
-                                <div className="p-8 space-y-8 relative">
+                                <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 relative">
                                     {/* Grid Background */}
                                     <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(var(--border-main)_1px,transparent_1px),linear-gradient(90deg,var(--border-main)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
 
@@ -527,7 +586,7 @@ export default function LessonPage() {
                                             key={statusStep}
                                             initial={{ y: 20, opacity: 0 }}
                                             animate={{ y: 0, opacity: 1 }}
-                                            className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-[var(--text-main)]">
+                                            className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-[var(--text-main)]">
                                             {statusStep === 0 && (
                                                 <span className="text-[var(--text-muted)]">
                                                     Initializing<span className="cursor-blink">_</span>
@@ -585,12 +644,12 @@ export default function LessonPage() {
                                     </div>
 
                                     {/* Step Indicators */}
-                                    <div className="relative z-10 flex justify-between items-center px-4">
+                                    <div className="relative z-10 flex justify-between items-center px-1 sm:px-4 gap-2">
                                         {[
-                                            { step: 1, label: "Extract", icon: "📄" },
-                                            { step: 2, label: "Script", icon: "✍️" },
-                                            { step: 3, label: "Voice", icon: "🎙️" },
-                                            { step: 4, label: "Done", icon: "✅" }
+                                            { step: 1, label: "Extract", icon: "E" },
+                                            { step: 2, label: "Script", icon: "S" },
+                                            { step: 3, label: "Voice", icon: "V" },
+                                            { step: 4, label: "Done", icon: "D" }
                                         ].map(({ step, label, icon }) => (
                                             <motion.div
                                                 key={step}
@@ -606,7 +665,7 @@ export default function LessonPage() {
                                                         : 'bg-[var(--bg-main)] border-[var(--border-main)]'}`}>
                                                     {icon}
                                                 </div>
-                                                <span className="text-xs font-bold uppercase text-[var(--text-muted)]">{label}</span>
+                                                <span className="text-[10px] sm:text-xs font-bold uppercase text-[var(--text-muted)]">{label}</span>
                                             </motion.div>
                                         ))}
                                     </div>
@@ -643,7 +702,7 @@ export default function LessonPage() {
                                             <div className="text-[var(--text-main)] flex items-center gap-2">
                                                 <span className="text-green-500">$</span>
                                                 <span className="truncate">{status.toLowerCase().replace('...', '')}</span>
-                                                <span className="cursor-blink text-[var(--primary)]">█</span>
+                                                <span className="cursor-blink text-[var(--primary)]">|</span>
                                             </div>
                                         </div>
                                     </div>

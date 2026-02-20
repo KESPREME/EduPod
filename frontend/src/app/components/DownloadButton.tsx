@@ -53,7 +53,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ jobId, audioUrl }) => {
                 onClick={() => setIsOpen(!isOpen)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center space-x-2 px-4 py-3 bg-[var(--primary)] text-black font-black uppercase tracking-widest border-swiss shadow-swiss hover:bg-[var(--primary)]/90 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                className="touch-target flex items-center space-x-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-[var(--primary)] text-black font-black uppercase tracking-widest border-swiss shadow-swiss hover:bg-[var(--primary)]/90 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
             >
                 <Download className="w-5 h-5" />
                 <span>Download</span>
@@ -65,7 +65,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ jobId, audioUrl }) => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full right-0 mt-2 w-56 bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[var(--shadow-block)] z-50 overflow-hidden"
+                        className="absolute top-full right-0 mt-2 w-[min(14rem,calc(100vw-1.5rem))] sm:w-56 bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[var(--shadow-block)] z-50 overflow-hidden"
                     >
                         <div className="flex flex-col">
                             <button

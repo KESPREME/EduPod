@@ -62,18 +62,18 @@ export default function CreateLessonPage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto py-12">
+        <div className="responsive-container max-w-4xl mx-auto py-8 sm:py-12">
             <button
                 onClick={() => router.back()}
-                className="mb-8 flex items-center gap-2 font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+                className="touch-target mb-6 sm:mb-8 inline-flex items-center gap-2 font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
             >
                 <ChevronLeft size={20} />
                 Back
             </button>
 
-            <div className="mb-12 text-center">
-                <h1 className="text-4xl font-black uppercase tracking-tighter mb-4 text-[var(--text-main)]">Create New Lesson</h1>
-                <p className="text-xl text-[var(--text-muted)] font-medium">Upload a PDF chapter to generate an interactive audio lesson.</p>
+            <div className="mb-8 sm:mb-12 text-center">
+                <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter mb-3 sm:mb-4 text-[var(--text-main)]">Create New Lesson</h1>
+                <p className="text-base sm:text-xl text-[var(--text-muted)] font-medium">Upload a PDF chapter to generate an interactive audio lesson.</p>
             </div>
 
             <FileUpload onUpload={handleUpload} isProcessing={isProcessing} />

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useRef, useEffect, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -12,6 +12,14 @@ interface CharacterModelProps {
     scale?: number;
     isActive: boolean;
     label?: string;
+}
+
+interface PBRMaterial extends THREE.Material {
+    envMapIntensity?: number;
+    metalness?: number;
+    roughness?: number;
+    map?: THREE.Texture | null;
+    color?: THREE.Color;
 }
 
 // GLTF Character Loader - uses original scene (no clone needed for single instances)
@@ -41,7 +49,7 @@ function AnimatedCharacter({
                 materials.forEach(mat => {
                     if (mat) {
                         try {
-                            const m = mat as any;
+                            const m = mat as PBRMaterial;
                             // FIX: Reset PBR properties that might cause darkness
                             m.envMapIntensity = 1.2; // Moderate boost
                             m.metalness = 0;         // Prevent metallic darkening
@@ -51,7 +59,7 @@ function AnimatedCharacter({
                             // IF we DON'T have a map, keep the original color (don't overwrite with white)
                             if (m.map) {
                                 if (m.color) m.color.setHex(0xffffff);
-                                m.map.colorSpace = "srgb"; // Ensure correct color space interpretation
+                                m.map.colorSpace = THREE.SRGBColorSpace; // Ensure correct color space interpretation
                             }
 
                             mat.needsUpdate = true;
@@ -112,10 +120,6 @@ function AnimatedCharacter({
     );
 }
 
-// Preload models
-useGLTF.preload("/models/teacher.glb");
-useGLTF.preload("/models/student.glb");
-
 // Camera controller with smooth transitions
 interface CameraControllerProps {
     target: "wide" | "teacher" | "student" | "board";
@@ -170,7 +174,7 @@ interface Classroom3DAdvancedProps {
 }
 
 // Chalkboard component
-function Chalkboard({ currentText }: { currentText?: string }) {
+function Chalkboard() {
     return (
         <group position={[0, 1.5, -3]}>
             {/* Frame */}
@@ -263,13 +267,11 @@ function Desk({ position }: { position: [number, number, number] }) {
 function PlaceholderCharacter({
     position,
     color,
-    isActive,
-    label
+    isActive
 }: {
     position: [number, number, number];
     color: string;
     isActive: boolean;
-    label: string;
 }) {
     const meshRef = useRef<THREE.Mesh>(null);
     const headRef = useRef<THREE.Mesh>(null);
@@ -319,7 +321,7 @@ function PlaceholderCharacter({
                 <group position={[0, 1.5, 0]}>
                     {[0, 1, 2].map((i) => (
                         <mesh key={i} position={[0.15 * (i - 1), 0, 0]}>
-                            <sphereGeometry args={[0.04 + Math.sin(Date.now() / 200 + i) * 0.02, 8, 8]} />
+                            <sphereGeometry args={[0.04, 8, 8]} />
                             <meshBasicMaterial color="#00ff00" />
                         </mesh>
                     ))}
@@ -391,7 +393,6 @@ const Classroom3DAdvanced: React.FC<Classroom3DAdvancedProps> = ({
                             position={[-1.8, 0, -1.5]}
                             color="#0066FF"
                             isActive={activeSpeaker === "host_1"}
-                            label="Professor"
                         />
                     )}
 
@@ -410,7 +411,6 @@ const Classroom3DAdvanced: React.FC<Classroom3DAdvancedProps> = ({
                             position={[1.8, 0, 1.5]}
                             color="#FF3D00"
                             isActive={activeSpeaker === "host_2"}
-                            label="Student"
                         />
                     )}
 
@@ -421,9 +421,9 @@ const Classroom3DAdvanced: React.FC<Classroom3DAdvancedProps> = ({
             </Canvas>
 
             {/* Overlay labels */}
-            <div className="absolute bottom-6 left-6 flex gap-4 pointer-events-none">
+            <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 flex flex-col sm:flex-row gap-2 sm:gap-4 pointer-events-none">
                 <div className={`
-                    flex items-center gap-3 px-6 py-3 rounded-2xl border-2 border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] font-black uppercase tracking-wider text-sm transition-all transform duration-300
+                    flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl border-2 border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] font-black uppercase tracking-wider text-[10px] sm:text-sm transition-all transform duration-300
                     ${activeSpeaker === 'host_1' ? 'bg-[#0066FF] text-white scale-110 -translate-y-2 ring-4 ring-white/20' : 'bg-white text-gray-400 scale-100 opacity-90'}
                 `}>
                     <div className="p-1.5 bg-white/20 rounded-full backdrop-blur-sm">
@@ -435,7 +435,7 @@ const Classroom3DAdvanced: React.FC<Classroom3DAdvancedProps> = ({
                     <span>Professor</span>
                 </div>
                 <div className={`
-                     flex items-center gap-3 px-6 py-3 rounded-2xl border-2 border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] font-black uppercase tracking-wider text-sm transition-all transform duration-300
+                     flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl border-2 border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] font-black uppercase tracking-wider text-[10px] sm:text-sm transition-all transform duration-300
                     ${activeSpeaker === 'host_2' ? 'bg-[#FF3D00] text-white scale-110 -translate-y-2 ring-4 ring-white/20' : 'bg-white text-gray-400 scale-100 opacity-90'}
                 `}>
                     <div className="p-1.5 bg-white/20 rounded-full backdrop-blur-sm">
@@ -449,8 +449,8 @@ const Classroom3DAdvanced: React.FC<Classroom3DAdvancedProps> = ({
             </div>
 
             {/* Controls hint */}
-            <div className="absolute top-4 right-4 text-xs font-bold text-gray-500 pointer-events-none">
-                🖱️ Drag to look around
+            <div className="hidden sm:block absolute top-4 right-4 text-xs font-bold text-gray-500 pointer-events-none">
+                Drag to look around
             </div>
         </div>
     );

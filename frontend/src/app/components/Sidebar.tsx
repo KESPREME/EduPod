@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, BookOpen, Settings, Menu, X, LogOut, Plus, Sun, Moon } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
@@ -12,15 +13,11 @@ export default function Sidebar() {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
 
-    // Fix Hydration: Wait for mount to render user-specific data
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
-
     // Consume Context
     const { toggleTheme, preferences } = useSettings();
     const { user, isGuest, signOut } = useAuth();
 
-    const displayUser = mounted && user ? {
+    const displayUser = user ? {
         name: isGuest ? "Guest User" : user.user_metadata?.full_name || user.email?.split('@')[0] || "Student",
         email: user.email || "",
         avatar: user.user_metadata?.avatar_url || ""
@@ -44,7 +41,8 @@ export default function Sidebar() {
             {/* Mobile Toggle */}
             <button
                 onClick={toggleSidebar}
-                className="md:hidden fixed z-50 top-4 left-4 p-2 bg-[var(--primary)] border-2 border-[var(--border-main)] shadow-[var(--shadow-block)] active:translate-y-[2px] active:shadow-none transition-all"
+                className="touch-target md:hidden fixed z-50 top-3 left-3 w-11 h-11 flex items-center justify-center bg-[var(--primary)] border-2 border-[var(--border-main)] shadow-[var(--shadow-block)] active:translate-y-[2px] active:shadow-none transition-all"
+                aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
             >
                 {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -64,12 +62,12 @@ export default function Sidebar() {
                 md:translate-x-0 md:sticky md:top-0 md:flex
             `}>
                 {/* Branding */}
-                <div className="h-20 flex flex-shrink-0 items-center px-6 border-b-2 border-[var(--border-main)] bg-[var(--primary)]">
+                <div className="h-20 flex flex-shrink-0 items-center px-5 sm:px-6 border-b-2 border-[var(--border-main)] bg-[var(--primary)]">
                     <h1 className="text-2xl font-black tracking-tighter uppercase text-black">EduPod.</h1>
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 p-6 space-y-4 overflow-y-auto">
+                <nav className="flex-1 p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto">
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname.startsWith(item.href);
@@ -80,7 +78,7 @@ export default function Sidebar() {
                                 href={item.href}
                                 onClick={() => setIsOpen(false)}
                                 className={`
-                                    flex items-center gap-3 px-4 py-3 font-bold border-2 border-[var(--border-main)] transition-all
+                                    touch-target flex items-center gap-3 px-4 py-3 font-bold border-2 border-[var(--border-main)] transition-all
                                     ${isActive
                                         ? "bg-[var(--secondary)] text-[var(--text-on-secondary)] shadow-[0_0_20px_var(--secondary)] border-[var(--secondary)] translate-x-[-2px] translate-y-[-2px]"
                                         : "bg-[var(--bg-card)] text-[var(--text-main)] hover-glow hover:text-black hover:bg-[var(--primary)] hover:translate-x-[-2px] hover:translate-y-[-2px]"}
@@ -93,7 +91,7 @@ export default function Sidebar() {
                     })}
 
                     <div className="pt-8 flex flex-col gap-4">
-                        <Link href="/create" className="w-full btn-neo flex items-center justify-center gap-2 hover:bg-[#FFDE59] hover:text-black active:bg-[#5E17EB] active:text-white transition-colors">
+                        <Link href="/create" className="touch-target w-full btn-neo flex items-center justify-center gap-2 hover:bg-[#FFDE59] hover:text-black active:bg-[#5E17EB] active:text-white transition-colors">
                             <Plus size={20} />
                             <span>New Lesson</span>
                         </Link>
@@ -101,12 +99,12 @@ export default function Sidebar() {
                 </nav>
 
                 {/* Footer User Profile & Theme Toggle */}
-                <div className="p-6 border-t-2 border-[var(--border-main)] bg-[var(--bg-main)] flex-shrink-0 flex flex-col gap-4">
+                <div className="p-4 sm:p-6 border-t-2 border-[var(--border-main)] bg-[var(--bg-main)] flex-shrink-0 flex flex-col gap-4">
 
                     {/* Theme Toggle */}
                     <button
                         onClick={toggleTheme}
-                        className="flex items-center justify-between w-full p-2 rounded border-2 border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)] transition-all group"
+                        className="touch-target flex items-center justify-between w-full p-2 rounded border-2 border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)] transition-all group"
                     >
                         <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)]">
                             {preferences.darkMode ? "Light Mode" : "Dark Mode"}
@@ -123,7 +121,15 @@ export default function Sidebar() {
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[var(--text-main)] flex-shrink-0 overflow-hidden flex items-center justify-center border-2 border-[var(--border-main)]">
                             {displayUser.avatar ? (
-                                <img src={displayUser.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                <Image
+                                    src={displayUser.avatar}
+                                    alt="Avatar"
+                                    width={40}
+                                    height={40}
+                                    sizes="40px"
+                                    className="w-full h-full object-cover"
+                                    unoptimized
+                                />
                             ) : (
                                 <span className="text-[var(--bg-main)] font-black text-lg">{displayUser.name?.charAt(0) || "-"}</span>
                             )}
@@ -134,7 +140,7 @@ export default function Sidebar() {
                         </div>
                         <button
                             onClick={handleLogout}
-                            className="p-2 hover:bg-[var(--bg-card)] rounded border-2 border-transparent hover:border-[var(--border-main)] transition-all text-[var(--text-main)]"
+                            className="touch-target p-2 hover:bg-[var(--bg-card)] rounded border-2 border-transparent hover:border-[var(--border-main)] transition-all text-[var(--text-main)]"
                             title="Logout"
                         >
                             <LogOut size={16} />

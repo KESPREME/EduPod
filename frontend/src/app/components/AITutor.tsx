@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -16,13 +16,12 @@ interface AITutorProps {
 
 const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
     const [messages, setMessages] = useState<Message[]>([
-        { role: "ai", content: "Hi! I'm your AI Tutor. Ask me anything about this lesson! 👋" }
+        { role: "ai", content: "Hi! I'm your AI Tutor. Ask me anything about this lesson!" },
     ]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll to bottom
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -34,62 +33,57 @@ const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
 
         const userMsg = input.trim();
         setInput("");
-        setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+        setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
         setLoading(true);
 
         try {
-            // Build history for context
-            const history = messages.slice(-6).map(m => [m.content, ""]); // Simple format adjustment
-
+            const history = messages.slice(-6).map((m) => [m.content, ""]);
             const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
             const res = await axios.post(`${BACKEND_URL}/ask_tutor`, {
                 job_id: jobId,
                 question: userMsg,
-                history: history
+                history: history,
             });
 
-            setMessages(prev => [...prev, { role: "ai", content: res.data.answer }]);
-        } catch (err) {
-            setMessages(prev => [...prev, { role: "ai", content: "⚠️ Sorry, I had trouble connecting. Please try again." }]);
+            setMessages((prev) => [...prev, { role: "ai", content: res.data.answer }]);
+        } catch {
+            setMessages((prev) => [...prev, { role: "ai", content: "Sorry, I had trouble connecting. Please try again." }]);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto h-[600px] flex flex-col bg-[var(--bg-card)] border-4 border-[var(--border-main)] shadow-[12px_12px_0px_0px_var(--primary)]">
-            {/* Header */}
-            <div className="p-6 bg-[var(--text-main)] text-[var(--bg-main)] flex items-center gap-4 border-b-4 border-[var(--border-main)]">
-                <div className="w-12 h-12 bg-[var(--primary)] rounded-full flex items-center justify-center border-2 border-[var(--bg-main)]">
+        <div className="w-full max-w-2xl mx-auto min-h-[420px] h-[70dvh] sm:h-[600px] max-h-[720px] flex flex-col bg-[var(--bg-card)] border-4 border-[var(--border-main)] shadow-[12px_12px_0px_0px_var(--primary)]">
+            <div className="p-4 sm:p-6 bg-[var(--text-main)] text-[var(--bg-main)] flex items-center gap-4 border-b-4 border-[var(--border-main)]">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[var(--primary)] rounded-full flex items-center justify-center border-2 border-[var(--bg-main)]">
                     <Bot className="text-black" size={24} />
                 </div>
                 <div>
-                    <h3 className="font-black uppercase tracking-widest text-xl">AI Tutor</h3>
-                    <p className="text-xs text-[var(--bg-main)]/80 font-bold uppercase tracking-wider">Online • Ready to help</p>
+                    <h3 className="font-black uppercase tracking-widest text-lg sm:text-xl">AI Tutor</h3>
+                    <p className="text-xs text-[var(--bg-main)]/80 font-bold uppercase tracking-wider">Online | Ready to help</p>
                 </div>
             </div>
 
-            {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[var(--bg-main)]/50" ref={scrollRef}>
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 bg-[var(--bg-main)]/50" ref={scrollRef}>
                 {messages.map((msg, idx) => (
-                    <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
-                    >
-                        <div className={`
+                    <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+                        <div
+                            className={`
                             w-10 h-10 rounded-full flex items-center justify-center border-2 border-[var(--border-main)] flex-shrink-0 shadow-[2px_2px_0px_0px_var(--border-main)]
                             ${msg.role === "ai" ? "bg-[var(--primary)] text-black" : "bg-[var(--bg-card)] text-[var(--text-main)]"}
-                        `}>
+                        `}
+                        >
                             {msg.role === "ai" ? <Bot size={20} /> : <User size={20} />}
                         </div>
-                        <div className={`
-                            max-w-[80%] p-5 text-sm font-bold leading-relaxed border-2 border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)]
+                        <div
+                            className={`
+                            max-w-[88%] sm:max-w-[80%] p-3 sm:p-5 text-sm font-bold leading-relaxed border-2 border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)]
                             ${msg.role === "ai"
                                 ? "bg-[var(--bg-card)] text-[var(--text-main)] rounded-tr-xl rounded-br-xl rounded-bl-xl"
                                 : "bg-[var(--text-main)] text-[var(--bg-main)] rounded-tl-xl rounded-bl-xl rounded-br-xl"}
-                        `}>
+                        `}
+                        >
                             {msg.content}
                         </div>
                     </motion.div>
@@ -108,8 +102,7 @@ const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
                 )}
             </div>
 
-            {/* Input Area */}
-            <div className="p-6 bg-[var(--bg-card)] border-t-4 border-[var(--border-main)]">
+            <div className="p-3 sm:p-6 bg-[var(--bg-card)] border-t-4 border-[var(--border-main)]">
                 <div className="flex gap-3">
                     <input
                         type="text"
@@ -117,13 +110,13 @@ const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSend()}
                         placeholder="Ask a question about the lesson..."
-                        className="flex-1 w-full bg-[var(--bg-main)] border-2 border-[var(--border-main)] p-4 font-bold outline-none text-[var(--text-main)] placeholder-[var(--text-muted)] focus:shadow-[4px_4px_0px_0px_var(--primary)] transition-all"
+                        className="flex-1 w-full bg-[var(--bg-main)] border-2 border-[var(--border-main)] p-3 sm:p-4 font-bold outline-none text-[var(--text-main)] placeholder-[var(--text-muted)] focus:shadow-[4px_4px_0px_0px_var(--primary)] transition-all"
                         disabled={loading}
                     />
                     <button
                         onClick={handleSend}
                         disabled={loading || !input.trim()}
-                        className="p-4 bg-[var(--text-main)] text-[var(--bg-main)] border-2 border-[var(--border-main)] hover:bg-[var(--secondary)] hover:text-black hover:border-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[4px_4px_0px_0px_var(--border-main)] active:translate-y-1 active:shadow-none"
+                        className="touch-target p-3 sm:p-4 bg-[var(--text-main)] text-[var(--bg-main)] border-2 border-[var(--border-main)] hover:bg-[var(--secondary)] hover:text-black hover:border-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[4px_4px_0px_0px_var(--border-main)] active:translate-y-1 active:shadow-none"
                     >
                         <Send size={24} />
                     </button>

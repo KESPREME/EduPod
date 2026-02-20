@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, HelpCircle, FileText, Mic, Download, Share2 } from "lucide-react";
+import { X, HelpCircle, FileText, Mic, Download } from "lucide-react";
 
 interface HelpModalProps {
     isOpen: boolean;
@@ -28,9 +28,9 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl z-[160] p-6"
+                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl z-[160] p-0 sm:p-6"
                     >
-                        <div className="card-swiss bg-white text-black max-h-[85vh] overflow-y-auto">
+                        <div className="mobile-modal-shell card-swiss bg-white text-black max-h-[100dvh] sm:max-h-[85vh] overflow-y-auto p-4 sm:p-6">
                             {/* Header */}
                             <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
                                 <div className="flex items-center gap-3">
@@ -95,7 +95,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
     );
 };
 
-const InstructionItem = ({ icon, title, desc, color }: { icon: any, title: string, desc: string, color: string }) => (
+const InstructionItem = ({ icon, title, desc, color }: { icon: React.ReactNode, title: string, desc: string, color: string }) => (
     <div className={`flex items-start gap-4 p-4 rounded-xl border-2 border-black/10 hover:border-black hover:shadow-[4px_4px_0px_black] transition-all ${color} bg-opacity-50`}>
         <div className="p-2 bg-white border-2 border-black rounded-lg shadow-sm">
             {icon}

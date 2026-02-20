@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useCallback } from "react";
 import { Upload, FileText, X, ArrowUpCircle } from "lucide-react";
@@ -49,10 +49,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUpload, isProcessing }) => {
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto space-y-8">
+        <div className="w-full max-w-2xl mx-auto space-y-6 sm:space-y-8">
             <motion.div
                 layout
-                className={`relative p-12 border-4 border-dashed rounded-lg transition-all duration-300 flex flex-col items-center justify-center text-center group cursor-pointer
+                className={`relative p-6 sm:p-12 border-4 border-dashed rounded-lg transition-all duration-300 flex flex-col items-center justify-center text-center group cursor-pointer
                     ${dragActive
                         ? "border-[var(--primary)] bg-[var(--bg-card)] scale-[1.02] shadow-[var(--shadow-block)]"
                         : "border-[var(--text-muted)] bg-[var(--bg-card)] hover:border-[var(--text-main)] hover:bg-[var(--bg-main)]"
@@ -83,10 +83,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUpload, isProcessing }) => {
                     </motion.div>
 
                     <div className="space-y-2">
-                        <h3 className="text-2xl font-black uppercase tracking-tight text-[var(--text-main)]">
+                        <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-[var(--text-main)]">
                             {dragActive ? "Drop PDF Here" : "Upload Textbook Chapter"}
                         </h3>
-                        <p className="text-[var(--text-muted)] font-medium">
+                        <p className="text-sm sm:text-base text-[var(--text-muted)] font-medium">
                             Drag and drop your PDF here, or click to browse
                         </p>
                     </div>
@@ -99,7 +99,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUpload, isProcessing }) => {
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                        className="card-swiss bg-[var(--bg-card)] p-4 flex items-center justify-between"
+                        className="card-swiss bg-[var(--bg-card)] p-3 sm:p-4 flex items-center justify-between gap-2"
                     >
                         <div className="flex items-center space-x-4">
                             <div className="p-2 bg-[var(--bg-main)] border-2 border-[var(--border-main)] rounded">
@@ -123,7 +123,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUpload, isProcessing }) => {
             <button
                 onClick={handleSubmit}
                 disabled={!file || isProcessing}
-                className={`w-full py-4 text-xl font-black uppercase tracking-widest border-2 border-[var(--border-main)] transition-all
+                className={`touch-target w-full py-3 sm:py-4 text-base sm:text-xl font-black uppercase tracking-widest border-2 border-[var(--border-main)] transition-all
                     ${!file || isProcessing
                         ? "bg-[var(--bg-main)] text-[var(--text-muted)] cursor-not-allowed opacity-50"
                         : "bg-[var(--primary)] text-black shadow-[var(--shadow-block)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[var(--shadow-block-hover)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-none"
@@ -131,7 +131,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUpload, isProcessing }) => {
             >
                 {isProcessing ? (
                     <span className="flex items-center justify-center gap-2">
-                        <span className="animate-spin text-xl">◌</span> Processing...
+                        <span className="animate-spin text-xl">O</span> Processing...
                     </span>
                 ) : (
                     "Generate Podcast"

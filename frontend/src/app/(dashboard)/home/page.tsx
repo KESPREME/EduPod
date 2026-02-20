@@ -20,19 +20,17 @@ export default function Home() {
     const { user, isGuest } = useAuth();
     const router = useRouter();
 
-    const [lessons, setLessons] = useState<Lesson[]>([]);
+    const [lessons, setLessons] = useState<Lesson[]>(() => {
+        if (typeof window === "undefined") return [];
+        const saved = localStorage.getItem("edupod_lessons");
+        return saved ? JSON.parse(saved) : [];
+    });
 
     // Remote Metrics
     const [dbStreak, setDbStreak] = useState(0);
     const [dbTotalLessons, setDbTotalLessons] = useState(0);
 
     useEffect(() => {
-        // Load lessons from localStorage for now (will sync to Supabase shortly in Phase 2)
-        const saved = localStorage.getItem("edupod_lessons");
-        if (saved) {
-            setLessons(JSON.parse(saved));
-        }
-
         // Load metrics from Supabase if authenticated
         const fetchMetrics = async () => {
             if (user && !isGuest) {
@@ -73,59 +71,59 @@ export default function Home() {
     const displayedStreak = (user && !isGuest) ? dbStreak : 2; // Guest uses proxy 2 streak
 
     return (
-        <div className="w-full max-w-6xl mx-auto space-y-8">
+        <div className="responsive-container w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
             <TutorialOverlay />
 
             {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 {/* Activity: Primary (Yellow) -> Text on Primary */}
-                <div className="card-swiss bg-[var(--primary)] p-6 flex flex-col justify-between h-32">
+                <div className="card-swiss bg-[var(--primary)] p-4 sm:p-6 flex flex-col justify-between h-28 sm:h-32">
                     <div className="flex justify-between items-start">
                         <TrendingUp className="w-6 h-6 text-[var(--text-on-primary)]" />
                         <span className="text-xs font-black uppercase tracking-widest text-[var(--text-on-primary)]">ACTIVITY</span>
                     </div>
                     <div>
-                        <span className="text-4xl font-black text-[var(--text-on-primary)]">{totalMinutes}</span>
-                        <span className="text-sm font-bold ml-1 text-[var(--text-on-primary)]">mins listened</span>
+                        <span className="text-3xl sm:text-4xl font-black text-[var(--text-on-primary)]">{totalMinutes}</span>
+                        <span className="text-xs sm:text-sm font-bold ml-1 text-[var(--text-on-primary)]">mins listened</span>
                     </div>
                 </div>
 
                 {/* Complete: Secondary -> Text on Secondary */}
-                <div className="card-swiss bg-[var(--secondary)] p-6 flex flex-col justify-between h-32 transition-colors">
+                <div className="card-swiss bg-[var(--secondary)] p-4 sm:p-6 flex flex-col justify-between h-28 sm:h-32 transition-colors">
                     <div className="flex justify-between items-start">
                         <Award className="w-6 h-6 text-[var(--text-on-secondary)]" />
                         <span className="text-xs font-black uppercase tracking-widest opacity-80 text-[var(--text-on-secondary)]">COMPLETE</span>
                     </div>
                     <div>
-                        <span className="text-4xl font-black text-[var(--text-on-secondary)]">{displayedLessons}</span>
-                        <span className="text-sm font-bold ml-1 text-[var(--text-on-secondary)]">lessons</span>
+                        <span className="text-3xl sm:text-4xl font-black text-[var(--text-on-secondary)]">{displayedLessons}</span>
+                        <span className="text-xs sm:text-sm font-bold ml-1 text-[var(--text-on-secondary)]">lessons</span>
                     </div>
                 </div>
 
                 {/* Streak: Surface (White/Black) -> Text Main */}
-                <div className="card-swiss bg-[var(--bg-card)] p-6 flex flex-col justify-between h-32">
+                <div className="card-swiss bg-[var(--bg-card)] p-4 sm:p-6 flex flex-col justify-between h-28 sm:h-32">
                     <div className="flex justify-between items-start">
                         <Zap className="w-6 h-6 text-[var(--accent)]" />
                         <span className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">STREAK</span>
                     </div>
                     <div>
-                        <span className="text-4xl font-black text-[var(--text-main)]">{displayedStreak}</span>
-                        <span className="text-sm font-bold ml-1 text-[var(--text-main)]">day streak</span>
+                        <span className="text-3xl sm:text-4xl font-black text-[var(--text-main)]">{displayedStreak}</span>
+                        <span className="text-xs sm:text-sm font-bold ml-1 text-[var(--text-main)]">day streak</span>
                     </div>
                 </div>
             </div>
 
             {/* Main Content */}
             <div>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-3xl font-black uppercase tracking-tighter text-[var(--text-main)]">Your Library</h2>
+                <div className="flex items-center justify-between mb-6 gap-2">
+                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-[var(--text-main)]">Your Library</h2>
                     <span className="text-sm font-bold text-[var(--text-muted)] border-2 border-[var(--border-main)] px-2 py-1 bg-[var(--bg-card)]">{lessons.length} LESSONS</span>
                 </div>
 
                 {lessons.length === 0 ? (
-                    <div className="w-full p-12 card-swiss text-center bg-[var(--bg-main)]">
+                    <div className="w-full p-6 sm:p-12 card-swiss text-center bg-[var(--bg-main)]">
                         <FileText className="w-16 h-16 mx-auto mb-4 text-[var(--text-muted)]" />
-                        <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 text-[var(--text-main)]">No Lessons Yet</h3>
+                        <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tighter mb-2 text-[var(--text-main)]">No Lessons Yet</h3>
                         <p className="text-[var(--text-muted)] mb-6 font-medium">Upload a PDF to create your first lesson</p>
                         <button onClick={() => router.push('/create')} className="btn-neo flex items-center gap-2 mx-auto">
                             <Plus size={20} /> Create First Lesson

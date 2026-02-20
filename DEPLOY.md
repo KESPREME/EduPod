@@ -7,14 +7,14 @@
 ## Architecture Overview
 
 ```
-┌─────────────────┐          ┌────────────────────────┐
-│   Next.js App   │←─REST──→ │    FastAPI Backend      │
-│   (Vercel)      │          │ (Railway / Render / VPS)│
-│                 │          │                         │
-│ NEXT_PUBLIC_    │          │ OpenRouter API ───→ LLM │
-│ API_URL=backend │          │ Azure Speech ───→ TTS   │
-└─────────────────┘          │ Edge TTS ───→ Fallback  │
-                             └────────────────────────┘
+┌─────────────────┐          ┌──────────────────────────────┐
+│   Next.js App   │←─REST──→ │      FastAPI Backend          │
+│   (Vercel)      │          │ (Vercel / Render / VPS)       │
+│                 │          │                               │
+│ NEXT_PUBLIC_    │          │ OpenRouter API ───→ LLM       │
+│ API_URL=backend │          │ Azure Speech ───→ TTS         │
+└─────────────────┘          │ Edge TTS ───→ Fallback        │
+                             └──────────────────────────────┘
 ```
 
 ---
@@ -99,34 +99,93 @@ npm run dev
      ```
    - Click **Deploy**
 
-3. **After Vercel deploy**, update your backend `.env`:
+3. **After Vercel deploy**, update your backend env:
    ```
    FRONTEND_URL=https://your-app.vercel.app
    ```
 
-### Backend → Railway / Render / Fly.io
+### Backend Deployment Options
 
-#### Option A: Railway
+#### Option A: Vercel (Serverless) — Recommended for Free Tier
 
-1. Go to [railway.app](https://railway.app) → New Project → Deploy from Repo
-2. Set **Root Directory** to `backend`
-3. Add environment variables:
+> [!IMPORTANT]
+> Vercel serverless functions have a **10s timeout** (free) / **60s timeout** (Pro).
+> Long-running podcast generation jobs may time out. For production workloads,
+> consider Render or a VPS. For demos and light usage, Vercel works great.
+
+1. **Create `vercel.json`** in the `backend/` folder (already created):
+   ```json
+   {
+     "version": 2,
+     "builds": [
+       { "src": "main.py", "use": "@vercel/python" }
+     ],
+     "routes": [
+       { "src": "/(.*)", "dest": "main.py" }
+     ]
+   }
+   ```
+
+2. **Deploy**:
+   - Go to [vercel.com/new](https://vercel.com/new)
+   - Import the **same repository**
+   - Set **Root Directory** to `backend`
+   - Framework Preset: **Other**
+   - Add environment variables:
+     ```
+     OPENROUTER_API_KEY=sk-or-v1-...
+     AZURE_SPEECH_KEY=your-key          (optional)
+     AZURE_SPEECH_REGION=centralindia   (optional)
+     FRONTEND_URL=https://your-app.vercel.app
+     ```
+   - Click **Deploy**
+
+3. **Update frontend** `NEXT_PUBLIC_API_URL`:
+   ```
+   https://your-backend-project.vercel.app
+   ```
+
+> [!NOTE]
+> Vercel serverless functions use `/tmp` for writable storage (ephemeral).
+> Uploaded files and generated audio will not persist across function invocations.
+> For persistent storage, integrate with an external service (e.g., Supabase Storage, S3).
+
+#### Option B: Render (Persistent Server) — Recommended for Production
+
+> [!TIP]
+> Render free tier spins down after **15 min of inactivity** (~30-50s cold start).
+> Use a free cron service to keep it alive (see step 6 below).
+
+1. Go to [render.com](https://render.com) → **New Web Service**
+2. Connect your GitHub repo, set **Root Directory** to `backend`
+3. **Runtime**: `Python`
+4. **Build Command**: `pip install -r requirements.txt`
+5. **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6. Add environment variables:
    ```
    OPENROUTER_API_KEY=sk-or-v1-...
-   AZURE_SPEECH_KEY=your-key
-   AZURE_SPEECH_REGION=eastus
+   AZURE_SPEECH_KEY=your-key          (optional)
+   AZURE_SPEECH_REGION=centralindia   (optional)
    FRONTEND_URL=https://your-app.vercel.app
    ```
-4. Set **Start Command**: `python main.py`
-5. Railway will auto-detect Python + install requirements
+7. Click **Create Web Service**
 
-#### Option B: Render
+**🔄 Keep-Alive Cron (Prevent Spin-Down):**
 
-1. Go to [render.com](https://render.com) → New Web Service
-2. Connect repo, set **Root Directory** to `backend`
-3. **Build Command**: `pip install -r requirements.txt`
-4. **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-5. Add environment variables (same as Railway)
+Your backend already has a `/health` endpoint. Use a free external cron service to ping it every **14 minutes**:
+
+- **Option 1 — [cron-job.org](https://cron-job.org)** (free, no signup required):
+  1. Go to [cron-job.org](https://cron-job.org) → Create Account → **Create Cron Job**
+  2. **URL**: `https://your-render-backend.onrender.com/health`
+  3. **Schedule**: Every **14 minutes** (`*/14 * * * *`)
+  4. Save — your backend will never sleep! ✅
+
+- **Option 2 — [UptimeRobot](https://uptimerobot.com)** (free, 50 monitors):
+  1. Sign up → **Add New Monitor**
+  2. **Monitor Type**: HTTP(s)
+  3. **URL**: `https://your-render-backend.onrender.com/health`
+  4. **Monitoring Interval**: 5 minutes
+  5. Save — also gives you uptime alerts!
 
 #### Option C: Any VPS / Docker
 

@@ -1,8 +1,9 @@
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 import shutil
 import os
+import tempfile
 import uuid
 import asyncio
 import json
@@ -15,6 +16,19 @@ load_dotenv()
 
 from processor import process_pdf, generate_script, generate_quiz, generate_flashcards, generate_notes, ask_tutor
 from synth import synthesize_podcast, generate_video_from_audio
+from supabase import create_client, Client
+
+# Initialize Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+
+supabase_client: Client | None = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Supabase client initialized.")
+    except Exception as e:
+        print(f"⚠️ Failed to initialize Supabase: {e}")
 
 
 class AskTutorRequest(BaseModel):
@@ -158,9 +172,26 @@ async def process_job(job_id: str, file_path: str, language: str, voices: dict, 
         output_file = os.path.join(OUTPUT_DIR, f"{job_id}.mp3")
         metadata = await synthesize_podcast(script, output_file, voices, tts_provider, language)
         
+        # Upload to Supabase if available
+        public_url = None
+        if supabase_client:
+            update_job(job_id, {"status": "Uploading to Supabase..."})
+            try:
+                with open(output_file, "rb") as f:
+                    # Upload the file
+                    supabase_client.storage.from_("lessons-audio").upload(
+                        path=f"{job_id}.mp3", 
+                        file=f.read(),
+                        file_options={"content-type": "audio/mpeg", "upsert": "true"}
+                    )
+                # Get the public URL
+                public_url = supabase_client.storage.from_("lessons-audio").get_public_url(f"{job_id}.mp3")
+            except Exception as up_e:
+                print(f"⚠️ Supabase upload failed: {up_e}, falling back to local storage.")
+        
         update_job(job_id, {
             "status": "Completed",
-            "output_url": f"/download/{job_id}",
+            "output_url": public_url if public_url else f"/download/{job_id}",
             "metadata": metadata,
             "quiz": quiz_data,
             "flashcards": flashcards_data,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, BookOpen, Settings, Menu, X, LogOut, Plus, Sun, Moon } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Sidebar() {
     const pathname = usePathname();
@@ -16,8 +17,14 @@ export default function Sidebar() {
     useEffect(() => setMounted(true), []);
 
     // Consume Context
-    const { user, toggleTheme, preferences } = useSettings();
-    const displayUser = mounted ? user : { name: "Student User", email: "", avatar: "" };
+    const { toggleTheme, preferences } = useSettings();
+    const { user, isGuest, signOut } = useAuth();
+
+    const displayUser = mounted && user ? {
+        name: isGuest ? "Guest User" : user.user_metadata?.full_name || user.email?.split('@')[0] || "Student",
+        email: user.email || "",
+        avatar: user.user_metadata?.avatar_url || ""
+    } : { name: "Loading...", email: "", avatar: "" };
 
     const navItems = [
         { icon: LayoutDashboard, label: "Dashboard", href: "/home" },
@@ -27,7 +34,8 @@ export default function Sidebar() {
 
     const toggleSidebar = () => setIsOpen(!isOpen);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        await signOut();
         router.push("/");
     };
 
@@ -105,9 +113,9 @@ export default function Sidebar() {
                         </span>
                         <div className="relative w-10 h-6">
                             {preferences.darkMode ? (
-                                <Sun className="w-5 h-5 text-[var(--primary)] absolute right-0 animate-spin-slow" />
+                                <Sun className="w-5 h-5 text-[var(--text-main)] absolute right-0 animate-spin-slow" />
                             ) : (
-                                <Moon className="w-5 h-5 text-[var(--secondary)] absolute right-0" />
+                                <Moon className="w-5 h-5 text-[var(--text-main)] absolute right-0" />
                             )}
                         </div>
                     </button>
@@ -117,12 +125,12 @@ export default function Sidebar() {
                             {displayUser.avatar ? (
                                 <img src={displayUser.avatar} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
-                                <span className="text-[var(--bg-main)] font-black text-lg">{displayUser.name?.charAt(0) || "S"}</span>
+                                <span className="text-[var(--bg-main)] font-black text-lg">{displayUser.name?.charAt(0) || "-"}</span>
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="font-bold truncate text-[var(--text-main)]">{displayUser.name}</p>
-                            <p className="text-xs text-[var(--text-muted)] truncate">Free Plan</p>
+                            <p className="text-xs text-[var(--text-muted)] truncate">{isGuest ? "Guest Session" : "Free Plan"}</p>
                         </div>
                         <button
                             onClick={handleLogout}

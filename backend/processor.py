@@ -93,12 +93,12 @@ def generate_script(text: str, language: str = "en", tts_provider: str = "azure"
     return invoke_llm(prompt, max_tokens=4096, temperature=0.8)
 
 
-def generate_quiz(script: str) -> list:
+def generate_quiz(script: str, num_questions: int = 5) -> list:
     """
     Generates multiple choice questions from the podcast script.
     """
     prompt = f"""
-    Based on the following podcast script, generate 5 multiple choice questions to test understanding.
+    Based on the following podcast script, generate {num_questions} multiple choice questions to test understanding.
     
     Format your response as a JSON array with this structure:
     [
@@ -110,7 +110,7 @@ def generate_quiz(script: str) -> list:
         }}
     ]
     
-    Only output the JSON array, nothing else.
+    Only output the JSON array, nothing else. Make sure to generate exactly {num_questions} items.
     
     Podcast Script:
     {script[:3000]}
@@ -142,12 +142,12 @@ def generate_quiz(script: str) -> list:
     ]
 
 
-def generate_flashcards(text: str) -> list:
+def generate_flashcards(text: str, num_flashcards: int = 8) -> list:
     """
     Generates flashcards (Term/Definition) from the text.
     """
     prompt = f"""
-    Extract 8 key terms and their definitions from the text below for study flashcards.
+    Extract {num_flashcards} key terms and their definitions from the text below for study flashcards.
     
     Format your response as a JSON array:
     [
@@ -157,7 +157,7 @@ def generate_flashcards(text: str) -> list:
         }}
     ]
     
-    Only output the JSON array.
+    Only output the JSON array. Make sure to generate exactly {num_flashcards} items.
     
     Text:
     {text[:4000]}
@@ -214,7 +214,7 @@ def ask_tutor(context: str, question: str, history: list = []) -> str:
     
     Student Question: {question}
     
-    Answer concisely and encouragingly. Use emojis occasionally.
+    Answer concisely and encouragingly. Use emojis occasionally. CRITICAL: DO NOT use any asterisks (*) for actions, emphasis, or markup (e.g. no *smiles* or *nods*).
     AI Tutor:
     """
     return invoke_llm(prompt, max_tokens=1024, temperature=0.6)

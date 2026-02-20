@@ -3,8 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Layers, Zap } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function LandingPage() {
+    const { user, loading } = useAuth();
+
     return (
         <div className="min-h-screen bg-[var(--bg-main)] flex flex-col font-sans transition-colors duration-300">
             {/* Header */}
@@ -14,9 +17,11 @@ export default function LandingPage() {
                     <span className="text-3xl font-black tracking-tighter uppercase text-[var(--text-main)] transition-colors duration-300 group-hover:text-[var(--secondary)]">Pod.</span>
                 </div>
                 <div className="flex gap-4">
-                    <Link href="/home" className="btn-neo">
-                        Launch App
-                    </Link>
+                    {!loading && (
+                        <Link href={user ? "/home" : "/login"} className="btn-neo">
+                            {user ? "Dashboard" : "Log In"}
+                        </Link>
+                    )}
                 </div>
             </header>
 
@@ -35,9 +40,11 @@ export default function LandingPage() {
                             Transform boring PDFs into immersive, 3D classroom experiences with AI-powered teachers.
                         </p>
                         <div className="flex gap-4">
-                            <Link href="/home" className="px-8 py-4 bg-[var(--text-main)] text-[var(--bg-card)] font-black uppercase tracking-widest text-lg border-2 border-[var(--border-main)] hover:opacity-90 transition-all flex items-center gap-2 group shadow-[var(--shadow-block)] hover:shadow-[var(--shadow-block-hover)] hover:scale-105">
-                                Get Started <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-                            </Link>
+                            {!loading && (
+                                <Link href={user ? "/home" : "/login"} className="px-8 py-4 bg-[var(--text-main)] text-[var(--bg-card)] font-black uppercase tracking-widest text-lg border-2 border-[var(--border-main)] hover:opacity-90 transition-all flex items-center gap-2 group shadow-[var(--shadow-block)] hover:shadow-[var(--shadow-block-hover)] hover:scale-105">
+                                    {user ? "Dashboard Open" : "Get Started"} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+                                </Link>
+                            )}
                             <button className="px-8 py-4 bg-[var(--bg-card)] text-[var(--text-main)] font-black uppercase tracking-widest text-lg border-2 border-[var(--border-main)] hover:bg-[var(--bg-main)] transition-all shadow-[var(--shadow-block)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[var(--shadow-block-hover)]">
                                 Demo Video
                             </button>

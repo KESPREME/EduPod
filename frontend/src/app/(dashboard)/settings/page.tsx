@@ -3,9 +3,18 @@
 import React from "react";
 import { User, Bell, Palette, ToggleRight, ToggleLeft } from "lucide-react";
 import { useSettings } from "../../context/SettingsContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SettingsPage() {
-    const { user, preferences, updateUser, toggleTheme, updatePreferences } = useSettings();
+    const { user: settingsUser, preferences, updateUser, toggleTheme, updatePreferences } = useSettings();
+    const { user: authUser, isGuest } = useAuth();
+
+    // Resolve displayed user
+    const displayUser = authUser ? {
+        name: isGuest ? "Guest User" : authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || "Student",
+        email: authUser.email || "guest@edupod.ai",
+        avatar: authUser.user_metadata?.avatar_url || settingsUser.avatar
+    } : settingsUser;
 
     const SettingsSection = ({ title, icon: Icon, children }: { title: string, icon: any, children: React.ReactNode }) => (
         <div className="card-swiss bg-[var(--bg-card)] p-6 mb-8">
@@ -38,32 +47,33 @@ export default function SettingsPage() {
             <SettingsSection title="Profile" icon={User}>
                 <div className="flex items-center gap-6">
                     <div className="w-20 h-20 bg-[var(--text-main)] rounded-full border-2 border-[var(--border-main)] overflow-hidden flex items-center justify-center">
-                        {user.avatar ? (
-                            <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                        {displayUser.avatar ? (
+                            <img src={displayUser.avatar} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
-                            <span className="text-[var(--bg-main)] font-black text-2xl">{user.name.charAt(0)}</span>
+                            <span className="text-[var(--bg-main)] font-black text-2xl">{displayUser.name.charAt(0)}</span>
                         )}
                     </div>
                     <div>
-                        <button className="btn-neo text-sm py-2 px-4 mb-2">Change Avatar</button>
+                        <button className="btn-neo bg-[var(--bg-main)] text-[var(--text-main)] text-sm py-2 px-4 mb-2">Change Avatar</button>
                         <p className="text-xs text-[var(--text-muted)]">Recommended size: 400x400px</p>
                     </div>
                 </div>
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-bold mb-1 uppercase">Display Name</label>
+                        <label className="block text-sm font-bold mb-1 uppercase text-[var(--text-main)]">Display Name</label>
                         <input
                             type="text"
-                            value={user.name}
+                            value={displayUser.name}
                             onChange={(e) => updateUser({ name: e.target.value })}
-                            className="input-neo"
+                            disabled={!isGuest && !!authUser}
+                            className={`input-neo ${!isGuest && !!authUser ? "bg-[var(--bg-main)] text-[var(--text-muted)] cursor-not-allowed" : "text-[var(--text-main)]"}`}
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold mb-1 uppercase">Email</label>
+                        <label className="block text-sm font-bold mb-1 uppercase text-[var(--text-main)]">Email</label>
                         <input
                             type="email"
-                            value={user.email}
+                            value={displayUser.email}
                             disabled
                             className="input-neo bg-[var(--bg-main)] text-[var(--text-muted)] cursor-not-allowed"
                         />

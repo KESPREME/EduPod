@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trash2, Play, Clock, FileText, TrendingUp, Award, Zap, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import TutorialOverlay from "../../components/TutorialOverlay";
+import { useAuth } from "../../context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 interface Lesson {
     id: string;
@@ -14,16 +17,40 @@ interface Lesson {
 }
 
 export default function Home() {
-    const [lessons, setLessons] = useState<Lesson[]>([]);
+    const { user, isGuest } = useAuth();
     const router = useRouter();
 
+    const [lessons, setLessons] = useState<Lesson[]>([]);
+
+    // Remote Metrics
+    const [dbStreak, setDbStreak] = useState(0);
+    const [dbTotalLessons, setDbTotalLessons] = useState(0);
+
     useEffect(() => {
-        // Load lessons from localStorage
+        // Load lessons from localStorage for now (will sync to Supabase shortly in Phase 2)
         const saved = localStorage.getItem("edupod_lessons");
         if (saved) {
             setLessons(JSON.parse(saved));
         }
-    }, []);
+
+        // Load metrics from Supabase if authenticated
+        const fetchMetrics = async () => {
+            if (user && !isGuest) {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('streak, total_lessons')
+                    .eq('id', user.id)
+                    .single();
+
+                if (!error && data) {
+                    setDbStreak(data.streak || 0);
+                    setDbTotalLessons(data.total_lessons || 0);
+                }
+            }
+        };
+
+        fetchMetrics();
+    }, [user, isGuest]);
 
     const handleDelete = (id: string) => {
         const updated = lessons.filter(l => l.id !== id);
@@ -40,12 +67,14 @@ export default function Home() {
         return `${mins} min`;
     };
 
-    // Calculate Stats
+    // Calculate Stats (Fallback to local if Guest)
     const totalMinutes = Math.floor(lessons.reduce((acc, curr) => acc + curr.duration, 0) / 60);
-    const completedLessons = lessons.length;
+    const displayedLessons = (user && !isGuest) ? dbTotalLessons : lessons.length;
+    const displayedStreak = (user && !isGuest) ? dbStreak : 2; // Guest uses proxy 2 streak
 
     return (
         <div className="w-full max-w-6xl mx-auto space-y-8">
+            <TutorialOverlay />
 
             {/* Stats Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -68,7 +97,7 @@ export default function Home() {
                         <span className="text-xs font-black uppercase tracking-widest opacity-80 text-[var(--text-on-secondary)]">COMPLETE</span>
                     </div>
                     <div>
-                        <span className="text-4xl font-black text-[var(--text-on-secondary)]">{completedLessons}</span>
+                        <span className="text-4xl font-black text-[var(--text-on-secondary)]">{displayedLessons}</span>
                         <span className="text-sm font-bold ml-1 text-[var(--text-on-secondary)]">lessons</span>
                     </div>
                 </div>
@@ -80,7 +109,7 @@ export default function Home() {
                         <span className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">STREAK</span>
                     </div>
                     <div>
-                        <span className="text-4xl font-black text-[var(--text-main)]">2</span>
+                        <span className="text-4xl font-black text-[var(--text-main)]">{displayedStreak}</span>
                         <span className="text-sm font-bold ml-1 text-[var(--text-main)]">day streak</span>
                     </div>
                 </div>

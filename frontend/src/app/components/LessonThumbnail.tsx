@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { motion } from "framer-motion";
 
 interface LessonThumbnailProps {
     title: string;
@@ -88,45 +87,33 @@ export function LessonThumbnail({ title, className = "" }: LessonThumbnailProps)
 
     return (
         <div
-            className={`relative w-full h-full overflow-hidden flex items-center justify-center border-b-2 border-black transition-colors ${className}`}
+            className={`absolute inset-0 overflow-hidden ${className}`}
             style={{ backgroundColor: config.bgColor }}
         >
             {/* Dot Grid Overlay for Neo-Brutalism feel */}
             <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "url('/dot-grid.png')" }}></div>
 
             {/* SVG Canvas */}
-            <svg viewBox="0 0 100 100" className="w-[120%] h-[120%] absolute pointer-events-none" preserveAspectRatio="xMidYMid slice">
-                {/* Background Shape 1 - Slow float */}
-                <motion.g
-                    initial={{ rotate: config.rotation1, scale: config.scale1, x: -10, y: -10 }}
-                    animate={{
-                        rotate: [config.rotation1, config.rotation1 + 10, config.rotation1 - 10, config.rotation1],
-                        y: [-10, -15, -5, -10]
-                    }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                    className="origin-center"
+            <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid slice">
+                {/* Background Shape 1 - Static */}
+                <g
+                    transform={`translate(-10, -10) rotate(${config.rotation1} 50 50) scale(${config.scale1})`}
                     style={{ transformOrigin: '30% 30%' }}
                 >
                     <g transform="translate(-10, -10)">
                         {renderShape(config.shapeType1, config.shapeColor1)}
                     </g>
-                </motion.g>
+                </g>
 
-                {/* Foreground Shape 2 - Faster rotation */}
-                <motion.g
-                    initial={{ rotate: config.rotation2, scale: config.scale2, x: 20, y: 10 }}
-                    animate={{
-                        rotate: [config.rotation2, config.rotation2 - 15, config.rotation2 + 5, config.rotation2],
-                        x: [20, 25, 15, 20]
-                    }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="origin-center"
+                {/* Foreground Shape 2 - Static */}
+                <g
+                    transform={`translate(20, 10) rotate(${config.rotation2} 50 50) scale(${config.scale2})`}
                     style={{ transformOrigin: '70% 70%' }}
                 >
                     <g transform="translate(40, 40)">
                         {renderShape(config.shapeType2, config.shapeColor2)}
                     </g>
-                </motion.g>
+                </g>
             </svg>
 
             {/* Add a noise overlay for extra texture (optional but fits the aesthetic) */}

@@ -641,7 +641,7 @@ export default function LessonPage() {
 
                         {/* Dynamic Lesson Thumbnail Icon */}
                         <div className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded border-2 border-[var(--border-main)] overflow-hidden shadow-[2px_2px_0px_0px_var(--border-main)] hidden sm:block relative bg-[var(--bg-main)]">
-                            <LessonThumbnail title={lessonTitle} className="absolute inset-0 w-full h-full" />
+                            <LessonThumbnail title={lessonTitle} className="absolute inset-0 w-full h-full" showTitle={false} />
                         </div>
 
                         <div className="min-w-0 flex-1">

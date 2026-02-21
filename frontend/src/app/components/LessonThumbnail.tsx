@@ -5,6 +5,7 @@ import React, { useMemo } from "react";
 interface LessonThumbnailProps {
     title: string;
     className?: string;
+    showTitle?: boolean;
 }
 
 // Simple hash function to generate a deterministic number from a string
@@ -30,7 +31,7 @@ const COLORS = [
 
 const SHAPES = ["circle", "square", "triangle", "pill", "star"];
 
-export function LessonThumbnail({ title, className = "" }: LessonThumbnailProps) {
+export function LessonThumbnail({ title, className = "", showTitle = true }: LessonThumbnailProps) {
     const config = useMemo(() => {
         const hash = hashString(title || "edu");
 
@@ -87,7 +88,7 @@ export function LessonThumbnail({ title, className = "" }: LessonThumbnailProps)
 
     return (
         <div
-            className={`absolute inset-0 overflow-hidden ${className}`}
+            className={`absolute inset-0 overflow-hidden flex flex-col items-center justify-center ${className}`}
             style={{ backgroundColor: config.bgColor }}
         >
             {/* Dot Grid Overlay for Neo-Brutalism feel */}
@@ -115,6 +116,19 @@ export function LessonThumbnail({ title, className = "" }: LessonThumbnailProps)
                     </g>
                 </g>
             </svg>
+
+            {/* Title Overlay */}
+            {showTitle && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-6 pointer-events-none z-10 text-center">
+                    <div
+                        className="bg-white border-2 sm:border-4 border-black px-3 sm:px-6 py-2 sm:py-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-3 max-w-[90%] sm:max-w-[85%]"
+                    >
+                        <h2 className="text-black font-black uppercase tracking-tighter text-base sm:text-xl lg:text-2xl line-clamp-2 leading-tight break-words" title={title}>
+                            {title || "UNTITLED LESSON"}
+                        </h2>
+                    </div>
+                </div>
+            )}
 
             {/* Add a noise overlay for extra texture (optional but fits the aesthetic) */}
             <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay pointer-events-none" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cfilter id=\"noiseFilter\"%3E%3CfeTurbulence type=\"fractalNoise\" baseFrequency=\"0.65\" numOctaves=\"3\" stitchTiles=\"stitch\"/%3E%3C/filter%3E%3Crect width=\"100%25\" height=\"100%25\" filter=\"url(%23noiseFilter)\"/%3E%3C/svg%3E')" }}></div>

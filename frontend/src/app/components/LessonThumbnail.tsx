@@ -97,21 +97,15 @@ export function LessonThumbnail({ title, className = "", showTitle = true }: Les
             {/* SVG Canvas */}
             <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid slice">
                 {/* Background Shape 1 - Static */}
-                <g
-                    transform={`translate(-10, -10) rotate(${config.rotation1} 50 50) scale(${config.scale1})`}
-                    style={{ transformOrigin: '30% 30%' }}
-                >
-                    <g transform="translate(-10, -10)">
+                <g transform={`rotate(${config.rotation1} 50 50) translate(-15, -15)`}>
+                    <g transform={`translate(50, 50) scale(${config.scale1}) translate(-50, -50)`}>
                         {renderShape(config.shapeType1, config.shapeColor1)}
                     </g>
                 </g>
 
                 {/* Foreground Shape 2 - Static */}
-                <g
-                    transform={`translate(20, 10) rotate(${config.rotation2} 50 50) scale(${config.scale2})`}
-                    style={{ transformOrigin: '70% 70%' }}
-                >
-                    <g transform="translate(40, 40)">
+                <g transform={`rotate(${config.rotation2} 50 50) translate(15, 15)`}>
+                    <g transform={`translate(50, 50) scale(${config.scale2}) translate(-50, -50)`}>
                         {renderShape(config.shapeType2, config.shapeColor2)}
                     </g>
                 </g>

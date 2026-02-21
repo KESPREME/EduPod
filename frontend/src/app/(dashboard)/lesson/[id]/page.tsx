@@ -17,7 +17,9 @@ import FlashcardDeck from "../../../components/FlashcardDeck";
 import QuizCard from "../../../components/QuizCard";
 import NotesView from "../../../components/NotesView";
 import AITutor from "../../../components/AITutor";
+import { LessonThumbnail } from "../../../components/LessonThumbnail";
 import { useAuth } from "../../../context/AuthContext";
+import { useSettings } from "../../../context/SettingsContext";
 import { supabase } from "@/lib/supabase";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
@@ -298,6 +300,7 @@ export default function LessonPage() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { preferences } = useSettings();
     const jobId = params.id as string;
 
     const [status, setStatus] = useState<string>("Loading...");
@@ -431,6 +434,17 @@ export default function LessonPage() {
                     setFlashcards(normalizedFlashcards);
                     setQuiz(normalizedQuiz);
                     if (intervalId) clearInterval(intervalId);
+
+                    // Dispatch Push Notification if enabled and permitted
+                    if (preferences.notifications && typeof window !== 'undefined' && 'Notification' in window) {
+                        if (Notification.permission === 'granted') {
+                            new Notification(`EduPod Lesson Ready!`, {
+                                body: `Your lesson is ready to play.`,
+                                icon: '/favicon.ico'
+                            });
+                        }
+                    }
+
                 } else if (currentStatus.startsWith("Error")) {
                     setError(currentStatus);
                     if (intervalId) clearInterval(intervalId);
@@ -621,10 +635,16 @@ export default function LessonPage() {
             {!theaterMode && (
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 md:gap-4 bg-[var(--bg-card)] border-2 border-[var(--border-main)] p-4 md:p-4 card-swiss">
                     <div className="flex items-start md:items-center gap-3 md:gap-4 min-w-0">
-                        <button onClick={() => router.back()} className="touch-target p-2 border-2 border-transparent hover:border-[var(--border-main)] hover:bg-[var(--bg-main)] rounded transition-all text-[var(--text-main)] shrink-0">
+                        <button onClick={() => router.back()} className="touch-target p-2 border-2 border-transparent hover:border-[var(--border-main)] hover:bg-[var(--bg-main)] rounded transition-all text-[var(--text-main)] shrink-0 mt-1 sm:mt-0">
                             <ChevronLeft size={20} />
                         </button>
-                        <div className="min-w-0">
+
+                        {/* Dynamic Lesson Thumbnail Icon */}
+                        <div className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded border-2 border-[var(--border-main)] overflow-hidden shadow-[2px_2px_0px_0px_var(--border-main)] hidden sm:block relative bg-[var(--bg-main)]">
+                            <LessonThumbnail title={lessonTitle} className="absolute inset-0 w-full h-full" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
                             {isEditingTitle ? (
                                 <div className="flex items-center gap-2 min-w-0">
                                     <input

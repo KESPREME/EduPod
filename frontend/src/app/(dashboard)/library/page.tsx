@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Play, Share2, Clock, Search, Plus, X, Layers, CheckCircle, BookOpen, GraduationCap, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { LessonThumbnail } from "../../components/LessonThumbnail";
 
 interface Lesson {
     id: string;
@@ -178,14 +179,18 @@ export default function Library() {
                                 onClick={() => handleLessonSelect(lesson.id)}
                             >
                                 {/* Card Header / Preview */}
-                                <div className="h-40 sm:h-48 bg-[var(--bg-main)] border-b-4 border-[var(--border-main)] relative overflow-hidden flex items-center justify-center p-4 sm:p-6 group-hover:bg-[var(--primary)] transition-colors duration-300">
-                                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_2px_2px,var(--text-muted)_1px,transparent_0)] bg-[size:20px_20px]"></div>
+                                <div className="h-40 sm:h-48 relative overflow-hidden flex items-center justify-center border-b-4 border-[var(--border-main)] group-hover:bg-[var(--primary)] transition-colors duration-300">
+                                    <LessonThumbnail
+                                        title={lesson.title || `Lesson ${lesson.id}`}
+                                        className="absolute inset-0 w-full h-full opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                    />
+                                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10"></div>
 
-                                    <div className="z-10 text-center transform group-hover:scale-110 transition-transform duration-300">
+                                    <div className="z-20 text-center transform group-hover:scale-110 transition-transform duration-300">
                                         <div className="w-16 h-16 bg-[var(--bg-card)] border-4 border-[var(--border-main)] flex items-center justify-center rounded-full mx-auto mb-3 shadow-[4px_4px_0px_0px_var(--border-main)]">
                                             <Play className="w-6 h-6 ml-1 text-[var(--text-main)]" />
                                         </div>
-                                        <div className="inline-block bg-black text-white px-3 py-1 text-xs font-black uppercase tracking-widest">
+                                        <div className="inline-block bg-black text-white px-3 py-1 text-xs font-black uppercase tracking-widest border-2 border-[var(--border-main)] shadow-[2px_2px_0px_0px_var(--border-main)]">
                                             {formatDuration(lesson.duration)}
                                         </div>
                                     </div>

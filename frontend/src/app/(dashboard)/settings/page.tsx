@@ -5,6 +5,7 @@ import Image from "next/image";
 import { User, Bell, Palette, ToggleRight, ToggleLeft, type LucideIcon } from "lucide-react";
 import { useSettings } from "../../context/SettingsContext";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 interface SettingsSectionProps {
     title: string;
@@ -48,14 +49,53 @@ function Toggle({ label, description, checked, onChange }: ToggleProps) {
 export default function SettingsPage() {
     const { user: settingsUser, preferences, updateUser, toggleTheme, updatePreferences } = useSettings();
     const { user: authUser, isGuest } = useAuth();
+    const { showToast } = useToast();
 
     const displayUser = authUser
         ? {
-              name: isGuest ? "Guest User" : authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Student",
-              email: authUser.email || "guest@edupod.ai",
-              avatar: authUser.user_metadata?.avatar_url || settingsUser.avatar,
-          }
+            name: isGuest ? "Guest User" : authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Student",
+            email: authUser.email || "guest@edupod.ai",
+            avatar: authUser.user_metadata?.avatar_url || settingsUser.avatar,
+        }
         : settingsUser;
+
+    const handlePushNotificationToggle = async () => {
+        if (!preferences.notifications) {
+            // Turning it ON
+            if (typeof window !== "undefined" && "Notification" in window) {
+                const permission = await Notification.requestPermission();
+                if (permission === "granted") {
+                    updatePreferences({ notifications: true });
+                    showToast("Push notifications enabled.", "success");
+                } else {
+                    showToast("Permission denied for push notifications.", "error");
+                    updatePreferences({ notifications: false });
+                }
+            } else {
+                showToast("Push notifications are not supported by this browser.", "error");
+            }
+        } else {
+            // Turning it OFF
+            updatePreferences({ notifications: false });
+            showToast("Push notifications disabled.", "info");
+        }
+    };
+
+    const handleEmailDigestToggle = () => {
+        if (!preferences.emailDigest) {
+            // Turning it ON
+            if (isGuest || !authUser) {
+                showToast("Please sign in to subscribe to the email digest.", "error");
+            } else {
+                updatePreferences({ emailDigest: true });
+                showToast(`Weekly email digest enabled for ${authUser.email}.`, "success");
+            }
+        } else {
+            // Turning it OFF
+            updatePreferences({ emailDigest: false });
+            showToast("Email digest disabled.", "info");
+        }
+    };
 
     return (
         <div className="responsive-container max-w-4xl mx-auto">
@@ -110,13 +150,13 @@ export default function SettingsPage() {
                     label="Push Notifications"
                     description="Get notified when your lessons are ready"
                     checked={preferences.notifications}
-                    onChange={() => updatePreferences({ notifications: !preferences.notifications })}
+                    onChange={handlePushNotificationToggle}
                 />
                 <Toggle
                     label="Email Digest"
                     description="Weekly summary of your learning progress"
                     checked={preferences.emailDigest}
-                    onChange={() => updatePreferences({ emailDigest: !preferences.emailDigest })}
+                    onChange={handleEmailDigestToggle}
                 />
             </SettingsSection>
 
@@ -126,11 +166,10 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                             onClick={() => updatePreferences({ ttsProvider: "azure" })}
-                            className={`touch-target p-4 border-2 rounded-lg text-left transition-all ${
-                                preferences.ttsProvider === "azure"
-                                    ? "border-[var(--secondary)] bg-[var(--secondary)] text-white shadow-[4px_4px_0px_0px_var(--text-main)]"
-                                    : "border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)]"
-                            }`}
+                            className={`touch-target p-4 border-2 rounded-lg text-left transition-all ${preferences.ttsProvider === "azure"
+                                ? "border-[var(--secondary)] bg-[var(--secondary)] text-white shadow-[4px_4px_0px_0px_var(--text-main)]"
+                                : "border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)]"
+                                }`}
                         >
                             <div className="font-black uppercase">Azure Neural TTS</div>
                             <div className="text-xs opacity-80 mt-1">Emotional, expressive voices with SSML. Premium quality.</div>
@@ -138,11 +177,10 @@ export default function SettingsPage() {
 
                         <button
                             onClick={() => updatePreferences({ ttsProvider: "edge" })}
-                            className={`touch-target p-4 border-2 rounded-lg text-left transition-all ${
-                                preferences.ttsProvider === "edge"
-                                    ? "border-[var(--secondary)] bg-[var(--secondary)] text-white shadow-[4px_4px_0px_0px_var(--text-main)]"
-                                    : "border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)]"
-                            }`}
+                            className={`touch-target p-4 border-2 rounded-lg text-left transition-all ${preferences.ttsProvider === "edge"
+                                ? "border-[var(--secondary)] bg-[var(--secondary)] text-white shadow-[4px_4px_0px_0px_var(--text-main)]"
+                                : "border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-main)]"
+                                }`}
                         >
                             <div className="font-black uppercase">Edge TTS (Cloud)</div>
                             <div className="text-xs opacity-80 mt-1">Microsoft cloud. Fast, reliable, free.</div>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import TutorialOverlay from "../../components/TutorialOverlay";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { LessonThumbnail } from "../../components/LessonThumbnail";
 
 interface Lesson {
     id: string;
@@ -142,9 +143,11 @@ export default function Home() {
                                 onClick={() => handleLessonSelect(lesson.id)}
                             >
                                 {/* Preview area */}
-                                <div className="h-32 bg-[var(--bg-main)] border-b-2 border-[var(--border-main)] flex items-center justify-center relative overflow-hidden group-hover:bg-[var(--primary)] transition-colors">
-                                    <div className="absolute inset-0 opacity-10 bg-[url('/dot-grid.png')]"></div>
-                                    <Play className="w-10 h-10 text-[var(--text-main)] opacity-20 group-hover:opacity-100 transition-opacity" />
+                                <div className="h-32 border-b-2 border-[var(--border-main)] flex items-center justify-center relative overflow-hidden group-hover:opacity-90 transition-opacity">
+                                    <LessonThumbnail title={lesson.title || `Lesson ${lesson.id.slice(0, 8)}`} />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Play className="w-12 h-12 text-white fill-white drop-shadow-md" />
+                                    </div>
                                 </div>
 
                                 {/* Info */}

@@ -137,7 +137,7 @@ const NotesView: React.FC<NotesViewProps> = ({ notes }) => {
                     const headerText = headerMatch[1].trim();
                     if (!headerText) continue;
 
-                    y += 6; // space before header
+                    y += 8; // space before header
                     ensureSpace(14);
 
                     pdf.setFont("helvetica", "bold");
@@ -152,15 +152,15 @@ const NotesView: React.FC<NotesViewProps> = ({ notes }) => {
                     // Underline the header
                     pdf.setDrawColor(180, 180, 180);
                     pdf.setLineWidth(0.3);
-                    pdf.line(margin, y, margin + 60, y);
-                    y += 5;
+                    pdf.line(margin, y, margin + 40, y);
+                    y += 6;
                     continue;
                 }
 
                 // - Bullet point
                 const bulletMatch = line.match(/^[-*+]\s+(.*)/);
                 if (bulletMatch) {
-                    const bulletText = bulletMatch[1].trim();
+                    const bulletText = bulletMatch[1].replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/`([^`]+)`/g, "$1").trim();
                     if (!bulletText) continue;
 
                     pdf.setFont("helvetica", "normal");
@@ -182,9 +182,12 @@ const NotesView: React.FC<NotesViewProps> = ({ notes }) => {
                 }
 
                 // Regular paragraph text
+                const plainText = line.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/`([^`]+)`/g, "$1").trim();
+                if (!plainText) continue;
+
                 pdf.setFont("helvetica", "normal");
                 pdf.setFontSize(11);
-                const wrappedText = pdf.splitTextToSize(line, contentWidth) as string[];
+                const wrappedText = pdf.splitTextToSize(plainText, contentWidth) as string[];
                 for (const tLine of wrappedText) {
                     ensureSpace(bodyLineHeight);
                     pdf.text(tLine, margin, y);

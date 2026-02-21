@@ -66,8 +66,9 @@ export default function Home() {
     };
 
     // Calculate Stats (Fallback to local if Guest)
-    const totalMinutes = Math.floor(lessons.reduce((acc, curr) => acc + curr.duration, 0) / 60);
-    const displayedLessons = (user && !isGuest) ? dbTotalLessons : lessons.length;
+    const totalMinutes = Math.floor(lessons.reduce((acc, curr) => acc + (curr.duration || 0), 0) / 60);
+    const completedLocalLessons = lessons.filter((l: any) => l.completed).length;
+    const displayedLessons = (user && !isGuest) ? dbTotalLessons : completedLocalLessons;
     const displayedStreak = (user && !isGuest) ? dbStreak : 2; // Guest uses proxy 2 streak
 
     return (

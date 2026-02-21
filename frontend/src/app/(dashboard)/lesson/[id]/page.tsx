@@ -17,6 +17,8 @@ import FlashcardDeck from "../../../components/FlashcardDeck";
 import QuizCard from "../../../components/QuizCard";
 import NotesView from "../../../components/NotesView";
 import AITutor from "../../../components/AITutor";
+import { useAuth } from "../../../context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
 const MOBILE_BREAKPOINT = 768;
@@ -88,7 +90,7 @@ const toRecord = (value: unknown): Record<string, unknown> | null => {
 const stripOptionPrefix = (value: string) => value.replace(/^[A-D][.)]\s*/i, "");
 
 const extractSourceText = (metadata: TranscriptSegment[] | null, notes: string) => {
-    const transcriptText = metadata?.map((segment) => segment.content).join(" ") ?? "";
+    const transcriptText = stripMarkdownSyntax(metadata?.map((segment) => segment.content).join(" ") ?? "");
     // Strip markdown from notes before using as fallback source
     const cleanNotes = stripMarkdownSyntax(notes);
     return normalizeWhitespace(`${cleanNotes} ${transcriptText}`);
@@ -98,7 +100,7 @@ const splitSentences = (text: string) =>
     text
         .split(/(?<=[.!?])\s+/)
         .map((sentence) => normalizeWhitespace(sentence))
-        .filter((sentence) => sentence.length >= 35 && sentence.length <= 220);
+        .filter((sentence) => sentence.length >= 35 && sentence.length <= 220 && !/^#/.test(sentence));
 
 const sentenceToTerm = (sentence: string, fallbackIndex: number) => {
     const words = sentence
@@ -474,8 +476,69 @@ export default function LessonPage() {
         return { activeSpeaker: null, activeContent: null };
     }, [currentTime, metadata]);
 
-    const handleTimeUpdate = () => { if (audioRef.current) setCurrentTime(audioRef.current.currentTime); };
-    const handleLoadedMetadata = () => { if (audioRef.current) setDuration(audioRef.current.duration); };
+    const { user, isGuest } = useAuth(); // Need useAuth to check if we should update supabase
+    const [hasCompleted, setHasCompleted] = useState(false);
+
+    const handleTimeUpdate = async () => {
+        if (!audioRef.current) return;
+        const current = audioRef.current.currentTime;
+        setCurrentTime(current);
+
+        // Check for completion (e.g., reached 90% of duration)
+        if (duration > 0 && current >= duration * 0.9 && !hasCompleted) {
+            setHasCompleted(true);
+
+            // 1. Update local storage (for both guests and authenticated to show "done" state locally)
+            const savedLessons = localStorage.getItem("edupod_lessons");
+            if (savedLessons) {
+                const lessons = JSON.parse(savedLessons);
+                const updatedLessons = lessons.map((l: any) => {
+                    if (l.id === jobId) return { ...l, completed: true };
+                    return l;
+                });
+                localStorage.setItem("edupod_lessons", JSON.stringify(updatedLessons));
+            }
+
+            // 2. Update Supabase if authenticated 
+            // We use an RPC call or simple fetch/update (since there's no atomic increment in JS client without RPC, we'll read then update, or just fetch total_lessons)
+            // But wait, the best way without RPC is to just get current streak/lessons then update.
+            // Let's do that.
+            if (user && !isGuest) {
+                try {
+                    const { data, error } = await supabase
+                        .from('users')
+                        .select('total_lessons')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (!error && data) {
+                        await supabase
+                            .from('users')
+                            .update({ total_lessons: (data.total_lessons || 0) + 1 })
+                            .eq('id', user.id);
+                    }
+                } catch (e) {
+                    console.error("Failed to update completion stats", e);
+                }
+            }
+        }
+    };
+    const handleLoadedMetadata = () => {
+        if (audioRef.current) {
+            const realDuration = audioRef.current.duration;
+            setDuration(realDuration);
+            // Update real duration in local storage
+            const savedLessons = localStorage.getItem("edupod_lessons");
+            if (savedLessons) {
+                const lessons = JSON.parse(savedLessons);
+                const updatedLessons = lessons.map((l: any) => {
+                    if (l.id === jobId) return { ...l, duration: realDuration };
+                    return l;
+                });
+                localStorage.setItem("edupod_lessons", JSON.stringify(updatedLessons));
+            }
+        }
+    };
     const handleSeek = (time: number) => { if (audioRef.current) audioRef.current.currentTime = time; };
 
     const learningTabs = [

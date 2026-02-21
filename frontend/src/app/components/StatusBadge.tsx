@@ -5,9 +5,10 @@ import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface StatusBadgeProps {
     status: string;
+    compact?: boolean;
 }
 
-const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+const StatusBadge: React.FC<StatusBadgeProps> = ({ status, compact = false }) => {
     if (!status) return null;
 
     const isError = status.toLowerCase().includes("error");
@@ -17,7 +18,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     // Determine colors based on intent
     let borderColor = "var(--border-main)";
     let bgColor = "var(--bg-main)";
-    let textColor = "var(--text-main)";
+    const textColor = "var(--text-main)";
 
     if (isProcessing) {
         borderColor = "var(--primary)";
@@ -30,11 +31,29 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
         bgColor = "var(--bg-card)";
     }
 
+    if (compact) {
+        return (
+            <div
+                className={`mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wider ${isCompleted ? "opacity-80" : ""}`}
+                style={{
+                    borderColor,
+                    backgroundColor: bgColor,
+                    color: textColor
+                }}
+            >
+                {isProcessing && <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--primary)]" />}
+                {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-[var(--secondary)]" />}
+                {isError && <AlertCircle className="w-3.5 h-3.5 text-[var(--accent)]" />}
+                <span className="text-[11px] leading-none">{status}</span>
+            </div>
+        );
+    }
+
     return (
         <div
             className="mt-6 p-4 inline-flex items-center space-x-3 transition-all border-2 shadow-[4px_4px_0px_0px_var(--shadow-color)]"
             style={{
-                borderColor: borderColor,
+                borderColor,
                 backgroundColor: bgColor,
                 color: textColor
             }}

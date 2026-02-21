@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Layers, Zap, FileText, Cpu, Headphones, Box, HelpCircle, PlayCircle, X } from "lucide-react";
+import { ArrowRight, BookOpen, Layers, Zap, FileText, Cpu, Headphones, HelpCircle, PlayCircle, Box, GraduationCap, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function LandingPage() {
@@ -139,7 +139,7 @@ export default function LandingPage() {
                             {/* Window Body */}
                             <div className="flex-1 overflow-hidden flex flex-col md:flex-row bg-[var(--bg-main)] relative min-h-0">
                                 {/* Left Pane: PDF/Document */}
-                                <div className="hidden md:flex flex-col w-1/3 min-w-[300px] border-r-4 border-[var(--border-main)] bg-[var(--bg-card)] p-6 relative overflow-y-auto">
+                                <div className="hidden md:flex flex-col w-1/3 min-w-[300px] border-r-4 border-[var(--border-main)] bg-[var(--bg-card)] p-6 relative overflow-hidden">
                                     <div className="flex items-center gap-2 mb-6 border-b-2 border-[var(--border-main)] pb-4 shrink-0">
                                         <FileText className="w-6 h-6 text-[var(--primary)] shrink-0" />
                                         <h4 className="font-bold text-lg text-[var(--text-main)] truncate">Biology_Chapter_3.pdf</h4>
@@ -176,56 +176,75 @@ export default function LandingPage() {
                                 </div>
 
                                 {/* Right Pane: Interactive Lesson */}
-                                <div className="flex-1 flex flex-col p-3 sm:p-4 md:p-6 gap-4 sm:gap-6 bg-[var(--bg-main)] relative overflow-y-auto">
+                                <div className="flex-1 grid grid-rows-[minmax(0,0.95fr)_minmax(0,1.05fr)] p-3 sm:p-4 md:p-5 gap-3 sm:gap-4 bg-[var(--bg-main)] relative overflow-hidden min-h-0">
 
                                     {/* 3D Classroom Viewport */}
-                                    <div className="bg-[var(--bg-card)] border-4 border-[var(--border-main)] rounded-2xl aspect-video md:aspect-[21/9] lg:aspect-[2/1] min-h-[250px] flex items-center justify-center relative overflow-hidden shadow-[8px_8px_0px_0px_var(--shadow-color)] shrink-0">
+                                    <div className="bg-[var(--bg-card)] border-4 border-[var(--border-main)] rounded-2xl h-full min-h-0 flex flex-col relative overflow-hidden shadow-[8px_8px_0px_0px_var(--shadow-color)]">
                                         <div className="absolute inset-0 opacity-10 bg-[url('/dot-grid.png')] pointer-events-none"></div>
                                         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--bg-card)] opacity-80 pointer-events-none"></div>
 
-                                        {/* Virtual Teacher Indicator */}
-                                        <div className="absolute top-4 right-4 bg-[var(--bg-main)] border-2 border-[var(--border-main)] px-3 py-1.5 rounded-lg flex items-center gap-2 font-bold text-xs uppercase shadow-[2px_2px_0px_0px_var(--shadow-color)]">
-                                            <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse"></div>
-                                            AI Teacher Active
+                                        {/* Structured Header to avoid overlay collisions */}
+                                        <div className="relative z-10 px-3 sm:px-4 py-2 border-b-2 border-[var(--border-main)] flex items-center justify-between gap-3">
+                                            <span className="font-bold text-[10px] sm:text-xs uppercase tracking-widest text-[var(--text-muted)]">Virtual Classroom</span>
+                                            <div className="bg-[var(--bg-main)] border-2 border-[var(--border-main)] px-2.5 py-1 rounded-lg flex items-center gap-2 font-bold text-[10px] sm:text-xs uppercase shadow-[2px_2px_0px_0px_var(--shadow-color)]">
+                                                <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse"></div>
+                                                AI Teacher Active
+                                            </div>
                                         </div>
 
-                                        {/* Abstract 3D Teacher Concept */}
-                                        <div className="relative z-10 flex flex-col items-center">
-                                            <div className="w-24 h-24 bg-[var(--primary)] border-4 border-[var(--border-main)] rounded-full flex items-center justify-center animate-bounce shadow-[0_10px_30px_rgba(var(--primary-rgb),0.5)] z-10">
-                                                <Box className="w-12 h-12 text-[var(--bg-card)]" />
+                                        {/* Teacher Concept */}
+                                        <div className="relative z-10 flex-1 px-4 sm:px-6 py-2 sm:py-3 pb-12 sm:pb-14 flex flex-col items-center justify-center gap-2">
+                                            <div className="relative w-16 h-16 sm:w-20 sm:h-20">
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    {Array.from({ length: 18 }).map((_, i) => (
+                                                        <span
+                                                            key={i}
+                                                            className="absolute left-1/2 top-1/2 w-1 h-3 sm:h-4 rounded-full bg-[var(--secondary)]/70 animate-pulse"
+                                                            style={{
+                                                                transform: `translate(-50%, -50%) rotate(${i * 20}deg) translateY(-35px)`,
+                                                                animationDelay: `${i * 70}ms`
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <div className="absolute inset-1.5 rounded-full border-2 border-[var(--primary)]/60"></div>
+                                                <div className="absolute inset-3 rounded-full bg-[var(--primary)] border-4 border-[var(--border-main)] flex items-center justify-center shadow-[6px_6px_0px_0px_var(--shadow-color)]">
+                                                    <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 text-[var(--text-main)]" />
+                                                </div>
                                             </div>
 
-                                            {/* Audio waves */}
-                                            <div className="flex items-end justify-center gap-1.5 mt-4 h-12 bg-[var(--bg-card)] border-2 border-[var(--border-main)] px-6 py-2 rounded-full shadow-[4px_4px_0px_0px_var(--shadow-color)]">
+                                            <div className="flex items-end justify-center gap-1.5 h-9 bg-[var(--bg-card)] border-2 border-[var(--border-main)] px-4 sm:px-5 py-1 rounded-full shadow-[4px_4px_0px_0px_var(--shadow-color)]">
                                                 {[3, 5, 2, 7, 4, 8, 3, 5, 2, 6, 3].map((n, i) => (
                                                     <div key={i} className="w-1.5 bg-[var(--text-main)] rounded-full animate-pulse" style={{ height: `${n * 10}%`, animationDelay: `${i * 100}ms` }}></div>
                                                 ))}
                                             </div>
                                         </div>
 
-                                        <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 bg-[var(--secondary)] text-white border-2 border-[var(--border-main)] px-3 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 sm:gap-3 shadow-[4px_4px_0px_0px_var(--shadow-color)]">
-                                            <Headphones className="w-5 h-5 shrink-0" />
-                                            <span className="truncate max-w-[150px] sm:max-w-[200px]">&quot;The mitochondria is the...&quot;</span>
+                                        <div className="absolute z-10 bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
+                                            <div className="bg-[var(--secondary)] text-white border-2 border-[var(--border-main)] px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 sm:gap-3 shadow-[4px_4px_0px_0px_var(--shadow-color)]">
+                                                <Headphones className="w-5 h-5 shrink-0" />
+                                                <span className="truncate max-w-[180px] sm:max-w-[240px]">&quot;The mitochondria is the...&quot;</span>
+                                            </div>
                                         </div>
                                     </div>
 
                                     {/* Quiz Section */}
-                                    <div className="bg-[var(--accent)] border-4 border-[var(--border-main)] rounded-2xl p-5 md:p-6 shadow-[8px_8px_0px_0px_var(--shadow-color)] mt-auto shrink-0 relative overflow-hidden group/opt z-10">
+                                    <div className="bg-[var(--accent)] border-4 border-[var(--border-main)] rounded-2xl p-4 md:p-5 shadow-[8px_8px_0px_0px_var(--shadow-color)] relative overflow-hidden group/opt z-10 h-full min-h-0 flex flex-col">
                                         <div className="absolute -right-12 -top-12 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-                                        <div className="flex items-center gap-3 mb-4 relative z-10">
+                                        <div className="flex items-center gap-3 mb-3 relative z-10">
                                             <div className="p-2 bg-white rounded-lg shadow-sm border-2 border-[var(--border-main)]">
                                                 <HelpCircle className="w-5 h-5 text-[var(--accent)]" />
                                             </div>
-                                            <h4 className="font-black text-white text-xl uppercase tracking-wider">Pop Quiz!</h4>
+                                            <h4 className="font-black text-white text-lg md:text-xl uppercase tracking-wider">Pop Quiz!</h4>
                                         </div>
-                                        <p className="text-white font-bold text-base sm:text-lg md:text-xl mb-6 relative z-10 leading-snug">Based on the text, what is the primary function of the <span className="underline decoration-wavy decoration-white/50 underline-offset-4">mitochondria</span>?</p>
+                                        <p className="text-white font-bold text-base sm:text-lg mb-4 relative z-10 leading-snug">Based on the text, what is the primary function of the <span className="underline decoration-wavy decoration-white/50 underline-offset-4">mitochondria</span>?</p>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
+                                        <div className="grid grid-cols-2 gap-2 sm:gap-3 relative z-10 flex-1 content-start">
                                             {['Energy Production', 'Cell Division', 'Protein Synthesis', 'Waste Removal'].map((opt, i) => (
-                                                <button key={i} className="bg-[var(--bg-card)] border-2 border-[var(--border-main)] text-[var(--text-main)] font-bold py-3 px-4 rounded-xl hover:bg-[var(--primary)] hover:translate-x-1 hover:shadow-[4px_4px_0px_0px_var(--border-main)] transition-all text-left flex justify-between items-center group w-full">
-                                                    <span className="truncate mr-2">{opt}</span>
-                                                    {i === 0 && <span className="w-5 h-5 shrink-0 rounded-full border-2 border-[var(--border-main)] group-hover:bg-[var(--text-main)] transition-colors relative"><span className="absolute inset-0 m-auto w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100"></span></span>}
-                                                    {i !== 0 && <span className="w-5 h-5 shrink-0 rounded-full border-2 border-[var(--border-main)] bg-[var(--bg-main)]"></span>}
+                                                <button key={i} className="bg-[var(--bg-card)] border-2 border-[var(--border-main)] text-[var(--text-main)] font-bold py-2.5 px-3 sm:px-4 rounded-xl hover:bg-[var(--primary)] hover:translate-x-1 hover:shadow-[4px_4px_0px_0px_var(--border-main)] transition-all text-left grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 group w-full min-h-[44px]">
+                                                    <span className="min-w-0 text-sm sm:text-base leading-tight whitespace-normal">{opt}</span>
+                                                    {i === 0 && <span className="justify-self-end w-5 h-5 shrink-0 rounded-full border-2 border-[var(--border-main)] group-hover:bg-[var(--text-main)] transition-colors relative"><span className="absolute inset-0 m-auto w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100"></span></span>}
+                                                    {i !== 0 && <span className="justify-self-end w-5 h-5 shrink-0 rounded-full border-2 border-[var(--border-main)] bg-[var(--bg-main)]"></span>}
                                                 </button>
                                             ))}
                                         </div>

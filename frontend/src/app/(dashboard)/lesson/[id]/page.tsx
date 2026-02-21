@@ -5,13 +5,12 @@ import axios from "axios";
 import dynamic from "next/dynamic";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Maximize, Minimize, Edit2, Check, Settings2, Subtitles, Play, Pause, FileText, Layers, CheckCircle, BookOpen, Bot, Loader2 } from "lucide-react";
+import { ChevronLeft, Maximize, Minimize, Edit2, Check, Settings2, Play, Pause, FileText, Layers, CheckCircle, BookOpen, Bot, Loader2, GripHorizontal } from "lucide-react";
 
 import StatusBadge from "../../../components/StatusBadge";
 import SeekBar from "../../../components/SeekBar";
 import PlaybackSpeed from "../../../components/PlaybackSpeed";
 import ClassroomScene from "../../../components/ClassroomScene";
-import TranscriptView from "../../../components/TranscriptView";
 import ShareButton from "../../../components/ShareButton";
 import DownloadButton from "../../../components/DownloadButton";
 import FlashcardDeck from "../../../components/FlashcardDeck";
@@ -20,11 +19,21 @@ import NotesView from "../../../components/NotesView";
 import AITutor from "../../../components/AITutor";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
+const MOBILE_BREAKPOINT = 768;
 const MOBILE_VIEW_PREF_KEY = "edupod_mobile_lesson_view";
 
 const Classroom3DAdvanced = dynamic(() => import("../../../components/Classroom3DAdvanced"), {
     ssr: false,
     loading: () => <div className="w-full aspect-video bg-black/80 animate-pulse" />,
+});
+
+const LazyTranscriptView = dynamic(() => import("../../../components/TranscriptView"), {
+    ssr: false,
+    loading: () => (
+        <div className="p-4 text-sm font-bold uppercase text-[var(--text-muted)]">
+            Loading transcript...
+        </div>
+    )
 });
 
 interface TranscriptSegment {
@@ -67,11 +76,11 @@ export default function LessonPage() {
     // Player State
     const [currentTime, setCurrentTime] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [showTranscript, setShowTranscript] = useState(false);
+    const [isTranscriptSheetExpanded, setIsTranscriptSheetExpanded] = useState(false);
     const [use3D, setUse3D] = useState(true);
     const [isMobileViewport, setIsMobileViewport] = useState(() => {
         if (typeof window === "undefined") return false;
-        return window.innerWidth <= 640;
+        return window.innerWidth <= MOBILE_BREAKPOINT;
     });
     const [duration, setDuration] = useState(0);
     const [theaterMode, setTheaterMode] = useState(false);
@@ -98,7 +107,7 @@ export default function LessonPage() {
         if (typeof window === "undefined") return;
 
         const syncViewport = () => {
-            setIsMobileViewport(window.innerWidth <= 640);
+            setIsMobileViewport(window.innerWidth <= MOBILE_BREAKPOINT);
         };
 
         syncViewport();
@@ -111,6 +120,7 @@ export default function LessonPage() {
 
         if (!isMobileViewport) {
             setUse3D(true);
+            setIsTranscriptSheetExpanded(false);
             return;
         }
 
@@ -222,54 +232,86 @@ export default function LessonPage() {
     const handleLoadedMetadata = () => { if (audioRef.current) setDuration(audioRef.current.duration); };
     const handleSeek = (time: number) => { if (audioRef.current) audioRef.current.currentTime = time; };
 
-    // --- RENDER HELPERS ---
-    const PlayerControls = ({ minimal = false }) => (
-        <div className={`flex items-center gap-3 sm:gap-6 ${minimal ? "justify-center" : "justify-center mt-4 sm:mt-6"}`}>
-            <PlaybackSpeed audioRef={audioRef as React.RefObject<HTMLAudioElement>} theaterMode={minimal} />
+    const learningTabs = [
+        { id: "transcript", label: "Transcript", icon: <FileText size={16} /> },
+        { id: "flashcards", label: "Flashcards", icon: <Layers size={16} /> },
+        { id: "quiz", label: "Quiz", icon: <CheckCircle size={16} /> },
+        { id: "notes", label: "Study Notes", icon: <BookOpen size={16} /> },
+        { id: "tutor", label: "AI Tutor", icon: <Bot size={16} /> },
+    ] as const;
 
-            {/* Play/Pause Button - onMouseDown for instant response, smooth opacity transition */}
-            <button
-                type="button"
-                onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (isPlaying) { audioRef.current?.pause(); setIsPlaying(false); }
-                    else { audioRef.current?.play(); setIsPlaying(true); }
-                }}
-                className={`touch-target relative flex items-center justify-center rounded-full border-4 cursor-pointer select-none transition-opacity duration-150 ${minimal
-                    ? "w-14 h-14 sm:w-16 sm:h-16 bg-[var(--primary)] text-black border-black hover:opacity-80 active:opacity-60"
-                    : "w-16 h-16 sm:w-20 sm:h-20 bg-[var(--bg-card)] text-[var(--primary)] border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)] hover:opacity-80 active:opacity-60"
-                    }`}
-            >
-                {isPlaying ? <Pause size={minimal ? 32 : 40} fill="currentColor" /> : <Play size={minimal ? 32 : 40} fill="currentColor" className="ml-1" />}
-            </button>
+    const handlePlayPause = () => {
+        if (isPlaying) {
+            audioRef.current?.pause();
+            setIsPlaying(false);
+            return;
+        }
+        audioRef.current?.play();
+        setIsPlaying(true);
+    };
 
-            {/* Transcript Button - Yellow when active, onMouseDown for instant response, smooth opacity transition */}
-            <button
-                type="button"
-                onMouseDown={(e) => {
-                    e.preventDefault();
-                    setShowTranscript(!showTranscript);
-                }}
-                className={`touch-target flex items-center justify-center border-2 rounded-full cursor-pointer select-none transition-opacity duration-150 ${showTranscript
-                    ? "w-11 h-11 sm:w-12 sm:h-12 bg-[var(--primary)] text-black border-[var(--primary)] hover:opacity-80 active:opacity-60"
-                    : minimal
-                        ? "w-11 h-11 sm:w-12 sm:h-12 bg-black/50 text-white border-white/50 hover:opacity-80 active:opacity-60"
-                        : "w-11 h-11 sm:w-12 sm:h-12 bg-[var(--bg-card)] text-[var(--text-main)] border-[var(--border-main)] shadow-[2px_2px_0px_0px_var(--border-main)] hover:opacity-80 active:opacity-60"
-                    }`}
-                title="Transcript"
-            >
-                <Subtitles size={24} />
-            </button>
-        </div>
-    );
+    const renderLearningTabContent = (mobileSheet = false) => {
+        if (activeTab === "transcript") {
+            return (
+                <div className={`card-swiss bg-[var(--bg-card)] border-2 border-[var(--border-main)] ${mobileSheet ? "p-3" : "p-4"}`}>
+                    <LazyTranscriptView
+                        metadata={metadata}
+                        currentTime={currentTime}
+                        onSeek={(time) => {
+                            if (audioRef.current) audioRef.current.currentTime = time;
+                        }}
+                    />
+                </div>
+            );
+        }
+
+        if (activeTab === "flashcards") {
+            return (
+                <div className={mobileSheet ? "py-4" : "py-6"}>
+                    {flashcards.length > 0 ? (
+                        <FlashcardDeck cards={flashcards} />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                            <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                            <p className="font-bold uppercase">Generating Flashcards...</p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        if (activeTab === "quiz") {
+            return (
+                <div className={mobileSheet ? "py-4" : "py-6"}>
+                    {quiz.length > 0 ? (
+                        <QuizCard
+                            questions={quiz}
+                            onComplete={(score) => console.log("Quiz Score:", score)}
+                        />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                            <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                            <p className="font-bold uppercase">Generating Quiz...</p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        if (activeTab === "notes") {
+            return <NotesView notes={notes} />;
+        }
+
+        return <AITutor jobId={jobId as string} />;
+    };
 
     return (
-        <div className={`responsive-page ${theaterMode ? "fixed inset-0 z-[100] bg-black flex flex-col" : "space-y-4 sm:space-y-6"}`}>
+        <div className={`responsive-page ${theaterMode ? "fixed inset-0 z-[100] bg-black flex flex-col" : "mobile-page-padding md:px-0 space-y-4 md:space-y-8 pb-[calc(1rem+env(safe-area-inset-bottom))]"}`}>
 
             {/* --- HEADER (Standard) --- */}
             {!theaterMode && (
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-[var(--bg-card)] border-2 border-[var(--border-main)] p-3 sm:p-4 card-swiss">
-                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 md:gap-4 bg-[var(--bg-card)] border-2 border-[var(--border-main)] p-4 md:p-4 card-swiss">
+                    <div className="flex items-start md:items-center gap-3 md:gap-4 min-w-0">
                         <button onClick={() => router.back()} className="touch-target p-2 border-2 border-transparent hover:border-[var(--border-main)] hover:bg-[var(--bg-main)] rounded transition-all text-[var(--text-main)] shrink-0">
                             <ChevronLeft size={20} />
                         </button>
@@ -291,25 +333,30 @@ export default function LessonPage() {
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-2 group cursor-pointer min-w-0" onClick={() => setIsEditingTitle(true)}>
-                                    <h1 className="font-black uppercase tracking-tight text-base sm:text-xl leading-none text-[var(--text-main)] hover:text-[var(--primary)] transition-colors truncate">
+                                    <h1 className="font-black uppercase tracking-tight text-lg md:text-xl leading-none text-[var(--text-main)] hover:text-[var(--primary)] transition-colors truncate">
                                         {lessonTitle}
                                     </h1>
                                     <Edit2 size={14} className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] transition-opacity" />
                                 </div>
                             )}
-                            <StatusBadge status={status} />
+                            <StatusBadge status={status} compact={isMobileViewport} />
                         </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 sm:gap-3">
-                        {audioUrl && (
+                    <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+                        {audioUrl && !isMobileViewport && (
                             <>
                                 <ShareButton jobId={jobId} />
                                 <DownloadButton jobId={jobId} audioUrl={audioUrl} />
                             </>
                         )}
-                        <button onClick={() => setTheaterMode(true)} className="touch-target btn-neo-secondary flex items-center gap-2">
+                        {audioUrl && isMobileViewport && (
+                            <div className="self-start">
+                                <ShareButton jobId={jobId} />
+                            </div>
+                        )}
+                        <button onClick={() => setTheaterMode(true)} className="touch-target btn-neo-secondary flex items-center justify-center gap-2 px-4 py-2.5 active:opacity-90">
                             <Maximize size={16} />
-                            <span className="hidden md:inline">Theater Mode</span>
+                            <span className="text-xs md:text-sm">Theater Mode</span>
                         </button>
                     </div>
                 </div>
@@ -342,34 +389,61 @@ export default function LessonPage() {
             </AnimatePresence>
 
             {audioUrl ? (
-                <motion.div layout className={`relative ${theaterMode ? "flex-1 flex flex-col" : "space-y-6"}`}>
+                <motion.div layout className={`relative ${theaterMode ? "flex-1 flex flex-col" : "space-y-6 md:space-y-8"}`}>
                     <audio ref={audioRef} src={audioUrl} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} onEnded={() => setIsPlaying(false)} className="hidden" />
 
                     {/* --- MAIN STAGE --- */}
                     <div className={`
                         relative transition-all duration-500 ease-in-out border-2 border-[var(--border-main)] overflow-hidden
-                        ${theaterMode ? "flex-1 w-full bg-black border-none" : "card-swiss bg-black p-1.5 sm:p-2 min-h-[320px] sm:min-h-[500px]"}
+                        ${theaterMode ? "flex-1 w-full bg-black border-none" : "card-swiss bg-black"}
                     `}>
-                        {/* 3D/2D Toggle Overlay - Fixed Z-index */}
-                        <div className={`absolute z-[105] flex gap-2 ${theaterMode ? "top-20 sm:top-24 right-3 sm:right-8" : "top-3 sm:top-4 right-3 sm:right-4"}`}>
-                            <div className="flex bg-black border-2 border-white rounded overflow-hidden shadow-[4px_4px_0px_rgba(0,0,0,0.5)]">
-                                <button
-                                    onClick={() => setUse3D(true)}
-                                    className={`touch-target px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-black uppercase transition-colors ${use3D ? 'bg-[var(--primary)] text-black' : 'text-white hover:bg-white/20'}`}
-                                >
-                                    3D View
-                                </button>
-                                <button
-                                    onClick={() => setUse3D(false)}
-                                    className={`touch-target px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-black uppercase transition-colors ${!use3D ? 'bg-[var(--secondary)] text-white' : 'text-white hover:bg-white/20'}`}
-                                >
-                                    2D View
-                                </button>
+                        {isMobileViewport && !theaterMode && (
+                            <div className="mobile-card-padding border-b-2 border-[var(--border-main)] bg-[var(--bg-card)]">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Lesson Player</p>
+                                        <h2 className="text-base font-black uppercase tracking-tight truncate">{lessonTitle}</h2>
+                                    </div>
+                                    <div className="inline-flex border-2 border-[var(--border-main)] rounded overflow-hidden bg-black">
+                                        <button
+                                            onClick={() => setUse3D(true)}
+                                            className={`touch-target px-4 text-[11px] font-black uppercase tracking-wide transition-colors ${use3D ? "bg-[var(--primary)] text-black" : "text-white"}`}
+                                        >
+                                            3D
+                                        </button>
+                                        <button
+                                            onClick={() => setUse3D(false)}
+                                            className={`touch-target px-4 text-[11px] font-black uppercase tracking-wide transition-colors ${!use3D ? "bg-[var(--secondary)] text-white" : "text-white"}`}
+                                        >
+                                            2D
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {/* 3D/2D Toggle Overlay - Desktop + Theater */}
+                        {(!isMobileViewport || theaterMode) && (
+                            <div className={`absolute z-[105] flex gap-2 ${theaterMode ? "top-20 sm:top-24 right-3 sm:right-8" : "top-3 sm:top-4 right-3 sm:right-4"}`}>
+                                <div className="flex bg-black border-2 border-white rounded overflow-hidden shadow-[4px_4px_0px_rgba(0,0,0,0.5)]">
+                                    <button
+                                        onClick={() => setUse3D(true)}
+                                        className={`touch-target px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-black uppercase transition-colors ${use3D ? 'bg-[var(--primary)] text-black' : 'text-white hover:bg-white/20'}`}
+                                    >
+                                        3D View
+                                    </button>
+                                    <button
+                                        onClick={() => setUse3D(false)}
+                                        className={`touch-target px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-black uppercase transition-colors ${!use3D ? 'bg-[var(--secondary)] text-white' : 'text-white hover:bg-white/20'}`}
+                                    >
+                                        2D View
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Viewport */}
-                        <div className={`w-full h-full relative ${!theaterMode ? "bg-[var(--bg-main)] border-2 border-white/20" : ""}`}>
+                        <div className={`w-full relative ${!theaterMode ? "bg-[var(--bg-main)] border-2 border-white/20 aspect-video" : "h-full"}`}>
                             {use3D ? (
                                 <Classroom3DAdvanced
                                     activeSpeaker={activeSpeaker}
@@ -383,7 +457,7 @@ export default function LessonPage() {
 
                             {/* Subtitle Overlay (3D Mode) */}
                             <AnimatePresence>
-                                {use3D && activeContent && (
+                                {(!isMobileViewport || theaterMode) && use3D && activeContent && (
                                     <motion.div
                                         initial={{ y: 20, opacity: 0 }}
                                         animate={{ y: 0, opacity: 1 }}
@@ -406,6 +480,69 @@ export default function LessonPage() {
                             </AnimatePresence>
                         </div>
 
+                        {isMobileViewport && !theaterMode && use3D && activeContent && (
+                            <div className="mobile-card-padding bg-black text-white border-t-2 border-white/20">
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">
+                                    {activeSpeaker === "host_1" ? "Professor" : "Student"}
+                                </p>
+                                <p className="text-sm leading-relaxed">{activeContent}</p>
+                            </div>
+                        )}
+
+                        {isMobileViewport && !theaterMode && (
+                            <div className="mobile-card-padding bg-[var(--bg-card)] border-t-2 border-[var(--border-main)] space-y-3 sticky bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30">
+                                <SeekBar currentTime={currentTime} duration={duration} onSeek={handleSeek} />
+
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        handlePlayPause();
+                                    }}
+                                    className="touch-target w-full px-4 py-3 border-2 border-[var(--border-main)] bg-[var(--primary)] text-black font-black uppercase tracking-widest flex items-center justify-center gap-2 active:opacity-90"
+                                >
+                                    {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
+                                    <span>{isPlaying ? "Pause Lesson" : "Play Lesson"}</span>
+                                </button>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setActiveTab("transcript");
+                                            setIsTranscriptSheetExpanded(true);
+                                        }}
+                                        className={`touch-target px-4 py-2.5 border-2 text-xs font-black uppercase tracking-widest transition-colors ${activeTab === "transcript" ? "bg-[var(--primary)] text-black border-[var(--border-main)]" : "bg-[var(--bg-main)] text-[var(--text-main)] border-[var(--border-main)]"}`}
+                                    >
+                                        Transcript
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setActiveTab("flashcards");
+                                            setIsTranscriptSheetExpanded(true);
+                                        }}
+                                        className={`touch-target px-4 py-2.5 border-2 text-xs font-black uppercase tracking-widest transition-colors ${activeTab === "flashcards" ? "bg-[var(--primary)] text-black border-[var(--border-main)]" : "bg-[var(--bg-main)] text-[var(--text-main)] border-[var(--border-main)]"}`}
+                                    >
+                                        Flashcards
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <PlaybackSpeed audioRef={audioRef as React.RefObject<HTMLAudioElement>} />
+                                    <button
+                                        onClick={() => setTheaterMode(true)}
+                                        className="touch-target btn-neo-secondary flex items-center justify-center gap-2 px-4 py-2.5 text-xs active:opacity-90"
+                                    >
+                                        <Maximize size={14} />
+                                        Theater
+                                    </button>
+                                </div>
+
+                                <DownloadButton jobId={jobId} audioUrl={audioUrl} fullWidth={true} />
+                            </div>
+                        )}
+
                         {/* --- THEATER CONTROLS OVERLAY --- */}
                         <AnimatePresence>
                             {theaterMode && (
@@ -419,19 +556,19 @@ export default function LessonPage() {
                                         <div className="w-full">
                                             <SeekBar currentTime={currentTime} duration={duration} onSeek={handleSeek} theaterMode={true} />
                                         </div>
-                                        <div className="flex justify-between items-center relative">
-                                            <div className="w-1/3 flex items-center gap-4">
-                                                {/* Left Side Controls (Volume/Settings placeholder) */}
-                                                <Settings2 className="text-white/50 hover:text-white transition-colors cursor-pointer" />
-                                            </div>
-
-                                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                                                <PlayerControls minimal={true} />
-                                            </div>
-
-                                            <div className="w-1/3 flex justify-end">
-                                                {/* Right Side Controls */}
-                                            </div>
+                                        <div className="flex flex-col sm:flex-row sm:justify-center items-center gap-3 sm:gap-6">
+                                            <PlaybackSpeed audioRef={audioRef as React.RefObject<HTMLAudioElement>} theaterMode={true} />
+                                            <button
+                                                type="button"
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    handlePlayPause();
+                                                }}
+                                                className="touch-target w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center rounded-full border-4 border-black bg-[var(--primary)] text-black hover:opacity-90 active:opacity-90"
+                                            >
+                                                {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
+                                            </button>
+                                            <Settings2 className="text-white/50 hover:text-white transition-colors cursor-pointer" />
                                         </div>
                                     </div>
                                 </motion.div>
@@ -440,25 +577,31 @@ export default function LessonPage() {
                     </div>
 
                     {/* --- STANDARD INFO DECK (Hidden in Theater) --- */}
-                    {!theaterMode && (
-                        <div className="card-swiss p-3 sm:p-6 bg-[var(--bg-card)] border-2 border-[var(--primary)] shadow-[8px_8px_0px_var(--primary)] text-[var(--text-main)]">
+                    {!theaterMode && !isMobileViewport && (
+                        <div className="card-swiss p-3 sm:p-6 bg-[var(--bg-card)] border-2 border-[var(--primary)] shadow-[8px_8px_0px_var(--primary)] text-[var(--text-main)] space-y-4">
                             <SeekBar currentTime={currentTime} duration={duration} onSeek={handleSeek} />
-                            <PlayerControls minimal={false} />
+                            <div className="flex items-center justify-center gap-6">
+                                <PlaybackSpeed audioRef={audioRef as React.RefObject<HTMLAudioElement>} />
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        handlePlayPause();
+                                    }}
+                                    className="touch-target w-20 h-20 flex items-center justify-center rounded-full border-4 bg-[var(--bg-card)] text-[var(--primary)] border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)] hover:opacity-90 active:opacity-90"
+                                >
+                                    {isPlaying ? <Pause size={40} fill="currentColor" /> : <Play size={40} fill="currentColor" className="ml-1" />}
+                                </button>
+                            </div>
                         </div>
                     )}
 
                     {/* --- LEARNING DECK --- */}
-                    {!theaterMode && (
+                    {!theaterMode && !isMobileViewport && (
                         <div className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
                             {/* Tabs */}
                             <div className="flex gap-2 sm:gap-3 pb-4 sm:pb-6 overflow-x-auto whitespace-nowrap pr-2">
-                                {[
-                                    { id: "transcript", label: "Transcript", icon: <FileText size={18} /> },
-                                    { id: "flashcards", label: "Flashcards", icon: <Layers size={18} /> },
-                                    { id: "quiz", label: "Quiz", icon: <CheckCircle size={18} /> },
-                                    { id: "notes", label: "Study Notes", icon: <BookOpen size={18} /> },
-                                    { id: "tutor", label: "AI Tutor", icon: <Bot size={18} /> },
-                                ].map((tab) => (
+                                {learningTabs.map((tab) => (
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
@@ -476,57 +619,68 @@ export default function LessonPage() {
                             </div>
 
                             {/* Content Area */}
-                            <div className="min-h-[280px] sm:min-h-[400px]">
-                                {activeTab === "transcript" && (
-                                    <div className="card-swiss bg-[var(--bg-card)] p-3 sm:p-4 max-h-[70dvh] sm:max-h-[600px] overflow-auto border-2 border-[var(--border-main)]">
-                                        <TranscriptView
-                                            metadata={metadata}
-                                            currentTime={currentTime}
-                                            onSeek={(time) => { if (audioRef.current) audioRef.current.currentTime = time; }}
-                                        />
-                                    </div>
-                                )}
-                                {activeTab === "flashcards" && (
-                                    <div className="py-4 sm:py-8">
-                                        {flashcards.length > 0 ? (
-                                            <FlashcardDeck cards={flashcards} />
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center py-20 opacity-50">
-                                                <Loader2 className="w-10 h-10 animate-spin mb-4" />
-                                                <p className="font-bold uppercase">Generating Flashcards...</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {activeTab === "quiz" && (
-                                    <div className="py-4 sm:py-8">
-                                        {quiz.length > 0 ? (
-                                            <QuizCard
-                                                questions={quiz}
-                                                onComplete={(score) => console.log("Quiz Score:", score)}
-                                            />
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center py-20 opacity-50">
-                                                <Loader2 className="w-10 h-10 animate-spin mb-4" />
-                                                <p className="font-bold uppercase">Generating Quiz...</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {activeTab === "notes" && (
-                                    <NotesView notes={notes} />
-                                )}
-                                {activeTab === "tutor" && (
-                                    <AITutor jobId={jobId as string} />
-                                )}
-                            </div>
+                            <div>{renderLearningTabContent()}</div>
                         </div>
                     )}
 
+                    {isMobileViewport && !theaterMode && (
+                        <div className="fixed inset-x-0 bottom-0 z-40 pointer-events-none">
+                            <motion.div
+                                drag="y"
+                                dragConstraints={{ top: 0, bottom: 320 }}
+                                dragElastic={0.15}
+                                onDragEnd={(_, info) => {
+                                    if (info.offset.y > 80) {
+                                        setIsTranscriptSheetExpanded(false);
+                                    } else if (info.offset.y < -40) {
+                                        setIsTranscriptSheetExpanded(true);
+                                    }
+                                }}
+                                animate={{ y: isTranscriptSheetExpanded ? 0 : "calc(80dvh - 72px)" }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
+                                className="pointer-events-auto mx-4 card-swiss bg-[var(--bg-card)] h-[80dvh] max-h-[80dvh] flex flex-col border-2 border-[var(--border-main)] shadow-[0_-8px_24px_rgba(0,0,0,0.2)]"
+                                style={{ willChange: "transform" }}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTranscriptSheetExpanded((prev) => !prev)}
+                                    className="touch-target flex items-center justify-center border-b-2 border-[var(--border-main)]"
+                                    aria-label="Toggle transcript panel"
+                                >
+                                    <GripHorizontal size={22} className="text-[var(--text-muted)]" />
+                                </button>
+
+                                <div className="sticky top-0 z-10 bg-[var(--bg-card)] border-b-2 border-[var(--border-main)]">
+                                    <div className="overflow-x-auto whitespace-nowrap px-2 py-2 flex gap-2">
+                                        {learningTabs.map((tab) => (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => {
+                                                    setActiveTab(tab.id);
+                                                    setIsTranscriptSheetExpanded(true);
+                                                }}
+                                                className={`touch-target flex items-center gap-1.5 px-4 py-2 text-[11px] font-black uppercase tracking-wide border-2 shrink-0 ${activeTab === tab.id
+                                                    ? "bg-[var(--primary)] text-black border-[var(--border-main)]"
+                                                    : "bg-[var(--bg-main)] text-[var(--text-main)] border-[var(--border-main)]"
+                                                    }`}
+                                            >
+                                                {tab.icon}
+                                                <span>{tab.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                                    {renderLearningTabContent(true)}
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
                 </motion.div>
             ) : (
                 /* Loading / Error State - Cyberpunk Terminal Style */
-                <div className="flex flex-col items-center justify-center min-h-[60vh] w-full max-w-3xl mx-auto px-3 sm:px-6 font-mono">
+                <div className="flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-4 md:px-6 py-8 md:py-12 font-mono">
                     {error ? (
                         <div className="card-swiss bg-[#1a0000] border-2 border-[var(--accent)] p-4 sm:p-8 text-center w-full shadow-[8px_8px_0px_var(--accent)]">
                             <div className="inline-block p-4 rounded-full bg-[var(--accent)] text-white mb-6 animate-pulse">

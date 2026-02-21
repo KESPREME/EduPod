@@ -101,6 +101,22 @@ h6 {
     min-height: 44px;
   }
 
+  .mobile-page-padding {
+    padding-inline: 1rem;
+  }
+
+  .safe-area-bottom {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  .mobile-stack-gap {
+    gap: 0.5rem;
+  }
+
+  .mobile-card-padding {
+    padding: 1rem;
+  }
+
   .table-responsive {
     width: 100%;
     overflow-x: auto;
@@ -121,6 +137,12 @@ h6 {
       max-width: none;
       height: 100dvh;
       border-radius: 0;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .touch-target:active {
+      opacity: 0.9;
     }
   }
 

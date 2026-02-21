@@ -234,7 +234,7 @@ const NotesView: React.FC<NotesViewProps> = ({ notes }) => {
                 </div>
 
                 <div className="p-4 sm:p-8 md:p-12 min-h-[320px] sm:min-h-[400px]">
-                    <article className="prose prose-lg max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-[var(--text-main)] prose-p:text-[var(--text-main)] prose-strong:text-[var(--primary)] prose-li:text-[var(--text-main)] prose-blockquote:border-l-4 prose-blockquote:border-[var(--primary)] prose-blockquote:bg-[var(--bg-main)] prose-blockquote:p-4 prose-blockquote:not-italic prose-blockquote:text-[var(--text-main)] mx-auto">
+                    <article className="notes-article max-w-none mx-auto">
                         <ReactMarkdown>{notes}</ReactMarkdown>
                     </article>
                 </div>

@@ -457,3 +457,120 @@ h6 {
   border-width: 1px;
   border-radius: 0;
 }
+
+/* ===== 3D FLASHCARD FLIP ===== */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* ===== STUDY NOTES TYPOGRAPHY (replaces Tailwind prose) ===== */
+.notes-article h1,
+.notes-article h2,
+.notes-article h3,
+.notes-article h4,
+.notes-article h5,
+.notes-article h6 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.notes-article h1 {
+  font-size: 2rem;
+}
+
+.notes-article h2 {
+  font-size: 1.5rem;
+  border-bottom: 3px solid var(--primary);
+  padding-bottom: 0.5rem;
+}
+
+.notes-article h3 {
+  font-size: 1.25rem;
+}
+
+.notes-article h1:first-child,
+.notes-article h2:first-child,
+.notes-article h3:first-child {
+  margin-top: 0;
+}
+
+.notes-article p {
+  color: var(--text-main);
+  font-size: 1rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+}
+
+.notes-article strong {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.notes-article ul,
+.notes-article ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.notes-article li {
+  color: var(--text-main);
+  font-size: 1rem;
+  line-height: 1.8;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.notes-article ul li::marker {
+  color: var(--primary);
+}
+
+.notes-article blockquote {
+  border-left: 4px solid var(--primary);
+  background: var(--bg-main);
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  font-style: normal;
+  color: var(--text-main);
+}
+
+.notes-article code {
+  background: var(--bg-main);
+  border: 1px solid var(--border-main);
+  padding: 0.15em 0.4em;
+  font-size: 0.9em;
+  border-radius: 2px;
+}
+
+.notes-article pre {
+  background: var(--bg-main);
+  border: 2px solid var(--border-main);
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.notes-article a {
+  color: var(--secondary);
+  text-decoration: underline;
+}
+
+.notes-article hr {
+  border: none;
+  border-top: 2px solid var(--border-main);
+  margin: 2rem 0;
+}

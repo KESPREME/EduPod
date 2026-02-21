@@ -95,8 +95,9 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({ cards }) => {
                     exit={{ x: -direction * 50, opacity: 0 }}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
+                    dragSnapToOrigin
                     onDragEnd={handleDrag}
-                    onClick={handleFlip}
+                    onTap={handleFlip}
                     whileTap={{ scale: 0.98 }}
                     className="w-full h-full cursor-pointer relative preserve-3d transition-transform duration-500"
                     style={{ transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)", transformStyle: "preserve-3d" }}

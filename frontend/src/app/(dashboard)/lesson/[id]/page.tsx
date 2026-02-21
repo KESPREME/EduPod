@@ -65,6 +65,21 @@ const STOP_WORDS = new Set([
 
 const normalizeWhitespace = (value: string) => value.replace(/\s+/g, " ").replace(/\*/g, "").trim();
 
+/** Strip markdown syntax (##, -, **, `) so raw notes don't leak into flashcards/quiz */
+const stripMarkdownSyntax = (text: string): string =>
+    text
+        .replace(/^#{1,6}\s+/gm, "")       // ## headers
+        .replace(/\*\*(.*?)\*\*/g, "$1")    // **bold**
+        .replace(/\*(.*?)\*/g, "$1")        // *italic*
+        .replace(/`([^`]+)`/g, "$1")        // `code`
+        .replace(/^\s*[-*+]\s+/gm, "")      // - bullet points (remove prefix entirely)
+        .replace(/\*/g, "")                  // stray asterisks
+        .replace(/#+/g, "")                  // stray hash marks
+        .replace(/\n{2,}/g, ". ")            // paragraph breaks → sentence breaks
+        .replace(/\n/g, " ")                 // remaining newlines
+        .replace(/\s+/g, " ")
+        .trim();
+
 const toRecord = (value: unknown): Record<string, unknown> | null => {
     if (!value || typeof value !== "object") return null;
     return value as Record<string, unknown>;
@@ -74,7 +89,9 @@ const stripOptionPrefix = (value: string) => value.replace(/^[A-D][.)]\s*/i, "")
 
 const extractSourceText = (metadata: TranscriptSegment[] | null, notes: string) => {
     const transcriptText = metadata?.map((segment) => segment.content).join(" ") ?? "";
-    return normalizeWhitespace(`${notes} ${transcriptText}`);
+    // Strip markdown from notes before using as fallback source
+    const cleanNotes = stripMarkdownSyntax(notes);
+    return normalizeWhitespace(`${cleanNotes} ${transcriptText}`);
 };
 
 const splitSentences = (text: string) =>
@@ -135,7 +152,7 @@ const normalizeFlashcards = (raw: unknown, metadata: TranscriptSegment[] | null,
         const dedupeKey = term.toLowerCase();
         if (seenTerms.has(dedupeKey)) continue;
         seenTerms.add(dedupeKey);
-        normalized.push({ term, definition });
+        normalized.push({ term: stripMarkdownSyntax(term), definition: stripMarkdownSyntax(definition) });
     }
 
     if (normalized.length >= 4) return normalized.slice(0, 16);
@@ -228,15 +245,15 @@ const normalizeQuiz = (
         const record = toRecord(candidate);
         if (!record) continue;
 
-        const question = normalizeWhitespace(String(record.question ?? record.prompt ?? ""));
+        const question = normalizeWhitespace(stripMarkdownSyntax(String(record.question ?? record.prompt ?? "")));
         if (!question) continue;
 
         const rawOptionsValue = record.options;
         let rawOptions: string[] = [];
         if (Array.isArray(rawOptionsValue)) {
-            rawOptions = rawOptionsValue.map((option) => normalizeWhitespace(String(option)));
+            rawOptions = rawOptionsValue.map((option) => normalizeWhitespace(stripMarkdownSyntax(String(option))));
         } else if (rawOptionsValue && typeof rawOptionsValue === "object") {
-            rawOptions = Object.values(rawOptionsValue as Record<string, unknown>).map((option) => normalizeWhitespace(String(option)));
+            rawOptions = Object.values(rawOptionsValue as Record<string, unknown>).map((option) => normalizeWhitespace(stripMarkdownSyntax(String(option))));
         }
 
         const cleanOptions = rawOptions
@@ -252,7 +269,7 @@ const normalizeQuiz = (
 
         const prefixedOptions = cleanOptions.map((option, idx) => `${QUIZ_OPTION_LABELS[idx]}) ${option}`);
         const correct = parseCorrectLetter(record, cleanOptions);
-        const explanation = normalizeWhitespace(String(record.explanation ?? record.reason ?? `The best answer is ${correct}.`));
+        const explanation = normalizeWhitespace(stripMarkdownSyntax(String(record.explanation ?? record.reason ?? `The best answer is ${correct}.`)));
 
         normalized.push({
             question,

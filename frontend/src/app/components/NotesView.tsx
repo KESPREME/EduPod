@@ -84,48 +84,113 @@ const NotesView: React.FC<NotesViewProps> = ({ notes }) => {
         setPdfError(null);
 
         try {
-            // Convert markdown to plain text, then strip any emoji/symbols 
-            // that jsPDF's helvetica font can't render
-            const rawPlainText = markdownToPlainText(notes);
-            const plainText = stripEmojisAndSymbols(rawPlainText);
-            if (!plainText) {
-                throw new Error("No note content available for PDF export.");
-            }
-
             const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = 14;
+            const margin = 16;
             const contentWidth = pageWidth - margin * 2;
-            const lineHeight = 6;
+            const bodyLineHeight = 6;
             let y = margin;
 
-            pdf.setFont("helvetica", "bold");
-            pdf.setFontSize(22);
-            pdf.text("EduPod Study Notes", margin, y);
-            y += 8;
-
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(10);
-            pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, y);
-            y += 6;
-
-            pdf.setDrawColor(0, 0, 0);
-            pdf.setLineWidth(0.4);
-            pdf.line(margin, y, pageWidth - margin, y);
-            y += 8;
-
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(12);
-            const wrappedLines = pdf.splitTextToSize(plainText, contentWidth) as string[];
-
-            for (const line of wrappedLines) {
-                if (y > pageHeight - margin) {
+            // Helper: check page break and add new page if needed
+            const ensureSpace = (needed: number) => {
+                if (y + needed > pageHeight - margin) {
                     pdf.addPage();
                     y = margin;
                 }
-                pdf.text(line, margin, y);
-                y += lineHeight;
+            };
+
+            // --- Document Title ---
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(24);
+            pdf.text("EduPod Study Notes", margin, y);
+            y += 10;
+
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(9);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, y);
+            y += 5;
+
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.line(margin, y, pageWidth - margin, y);
+            y += 10;
+            pdf.setTextColor(0, 0, 0);
+
+            // --- Parse markdown line by line ---
+            const cleanedNotes = stripEmojisAndSymbols(notes);
+            const lines = cleanedNotes.split("\n");
+
+            for (const rawLine of lines) {
+                const line = rawLine.replace(/\*/g, "").trim();
+
+                // Skip empty lines but add a small gap
+                if (!line) {
+                    y += 3;
+                    continue;
+                }
+
+                // ## Section Header
+                const headerMatch = line.match(/^#{1,3}\s+(.*)/);
+                if (headerMatch) {
+                    const headerText = headerMatch[1].trim();
+                    if (!headerText) continue;
+
+                    y += 6; // space before header
+                    ensureSpace(14);
+
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(16);
+                    const wrappedHeader = pdf.splitTextToSize(headerText.toUpperCase(), contentWidth) as string[];
+                    for (const hLine of wrappedHeader) {
+                        ensureSpace(8);
+                        pdf.text(hLine, margin, y);
+                        y += 8;
+                    }
+
+                    // Underline the header
+                    pdf.setDrawColor(180, 180, 180);
+                    pdf.setLineWidth(0.3);
+                    pdf.line(margin, y, margin + 60, y);
+                    y += 5;
+                    continue;
+                }
+
+                // - Bullet point
+                const bulletMatch = line.match(/^[-*+]\s+(.*)/);
+                if (bulletMatch) {
+                    const bulletText = bulletMatch[1].trim();
+                    if (!bulletText) continue;
+
+                    pdf.setFont("helvetica", "normal");
+                    pdf.setFontSize(11);
+                    const bulletIndent = margin + 4;
+                    const bulletContentWidth = contentWidth - 4;
+                    const wrappedBullet = pdf.splitTextToSize(bulletText, bulletContentWidth) as string[];
+
+                    for (let i = 0; i < wrappedBullet.length; i++) {
+                        ensureSpace(bodyLineHeight);
+                        if (i === 0) {
+                            pdf.text("-", margin, y); // safe bullet
+                        }
+                        pdf.text(wrappedBullet[i], bulletIndent, y);
+                        y += bodyLineHeight;
+                    }
+                    y += 1; // small gap after bullet
+                    continue;
+                }
+
+                // Regular paragraph text
+                pdf.setFont("helvetica", "normal");
+                pdf.setFontSize(11);
+                const wrappedText = pdf.splitTextToSize(line, contentWidth) as string[];
+                for (const tLine of wrappedText) {
+                    ensureSpace(bodyLineHeight);
+                    pdf.text(tLine, margin, y);
+                    y += bodyLineHeight;
+                }
+                y += 1;
             }
 
             pdf.save("EduPod_Study_Notes.pdf");

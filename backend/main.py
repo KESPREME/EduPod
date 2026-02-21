@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+import warnings
 import shutil
 import os
 import tempfile
@@ -10,6 +11,9 @@ import json
 from pydantic import BaseModel
 from typing import List, Optional
 from dotenv import load_dotenv
+
+# Suppress pydub SyntaxWarnings on Python 3.13+ (invalid escape sequences in their regex)
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
 
 # Load environment variables from .env file
 load_dotenv()
@@ -106,7 +110,7 @@ LANGUAGE_VOICES = {
     "zh": {"host_1": "zh-CN-YunxiNeural", "host_2": "zh-CN-XiaoxiaoNeural"},
 }
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {
         "message": "EduPod API V3 is running",
@@ -115,7 +119,7 @@ async def root():
         "tts": "Azure Neural TTS + Edge TTS fallback",
     }
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     """Health check endpoint for deployment monitoring."""
     return {"status": "healthy"}

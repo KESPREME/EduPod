@@ -1,83 +1,78 @@
-﻿"use client";
+"use client";
 
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Download, FileText, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
 interface NotesViewProps {
     notes: string;
 }
 
+const markdownToPlainText = (markdown: string) => {
+    return markdown
+        .replace(/```[\s\S]*?```/g, (match) => match.replace(/```/g, "").trim())
+        .replace(/^#{1,6}\s+/gm, "")
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\*(.*?)\*/g, "$1")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/\[(.*?)\]\((.*?)\)/g, "$1 ($2)")
+        .replace(/^\s*[-*+]\s+/gm, "- ")
+        .replace(/\r/g, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+};
+
 const NotesView: React.FC<NotesViewProps> = ({ notes }) => {
-    const notesRef = useRef<HTMLDivElement>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [pdfError, setPdfError] = useState<string | null>(null);
 
     const handleDownloadPDF = async () => {
-        if (!notesRef.current || isGeneratingPdf) return;
+        if (!notes || isGeneratingPdf) return;
+
         setIsGeneratingPdf(true);
         setPdfError(null);
 
         try {
-            const element = notesRef.current;
-
-            element.style.position = "absolute";
-            element.style.left = "0";
-            element.style.top = "0";
-            element.style.zIndex = "-9999";
-            document.body.appendChild(element);
-
-            await new Promise((resolve) => setTimeout(resolve, 100));
-
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                backgroundColor: "#ffffff",
-                logging: false,
-                useCORS: true,
-                allowTaint: true,
-                windowWidth: 800,
-                windowHeight: element.scrollHeight,
-            });
-
-            document.querySelector(".print-container-parent")?.appendChild(element);
-            element.style.position = "";
-            element.style.left = "-9999px";
-            element.style.zIndex = "";
-
-            if (!canvas || canvas.width === 0 || canvas.height === 0) {
-                throw new Error("Canvas rendering failed - empty result");
+            const plainText = markdownToPlainText(notes);
+            if (!plainText) {
+                throw new Error("No note content available for PDF export.");
             }
 
-            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 14;
+            const contentWidth = pageWidth - margin * 2;
+            const lineHeight = 6;
+            let y = margin;
 
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-            });
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(22);
+            pdf.text("EduPod Study Notes", margin, y);
+            y += 8;
 
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(10);
+            pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, y);
+            y += 6;
 
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight) * 1.8;
-            const scaledWidth = imgWidth * ratio;
-            const scaledHeight = imgHeight * ratio;
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.4);
+            pdf.line(margin, y, pageWidth - margin, y);
+            y += 8;
 
-            let yPosition = 0;
-            let remainingHeight = scaledHeight;
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(12);
+            const wrappedLines = pdf.splitTextToSize(plainText, contentWidth) as string[];
 
-            pdf.addImage(imgData, "PNG", 0, yPosition, scaledWidth, scaledHeight);
-            remainingHeight -= pdfHeight;
-
-            while (remainingHeight > 0) {
-                yPosition -= pdfHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, "PNG", 0, yPosition, scaledWidth, scaledHeight);
-                remainingHeight -= pdfHeight;
+            for (const line of wrappedLines) {
+                if (y > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+                pdf.text(line, margin, y);
+                y += lineHeight;
             }
 
             pdf.save("EduPod_Study_Notes.pdf");
@@ -128,26 +123,6 @@ const NotesView: React.FC<NotesViewProps> = ({ notes }) => {
             </div>
 
             {pdfError && <div className="mt-4 p-4 bg-red-100 border-2 border-red-500 text-red-700 font-bold text-center">Warning: {pdfError}</div>}
-
-            <div className="print-container-parent absolute top-0 left-[-9999px]">
-                <div ref={notesRef} className="w-[800px] min-h-[1100px] bg-white text-black p-16 font-sans border border-gray-200">
-                    <div className="mb-12 border-b-4 border-black pb-6 flex justify-between items-end">
-                        <h1 className="text-5xl font-black uppercase tracking-tighter text-black">
-                            Study<span style={{ color: "#FFDE59" }}>Notes</span>
-                        </h1>
-                        <span className="font-bold font-mono text-sm uppercase text-gray-600">EduPod Generated</span>
-                    </div>
-
-                    <article
-                        className="prose prose-xl max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-black prose-p:text-black prose-li:text-black prose-blockquote:border-l-8 prose-blockquote:bg-gray-50 prose-blockquote:p-6 prose-blockquote:not-italic prose-blockquote:text-gray-700"
-                        style={{ "--tw-prose-strong": "#5E17EB" } as React.CSSProperties}
-                    >
-                        <ReactMarkdown>{notes}</ReactMarkdown>
-                    </article>
-
-                    <div className="mt-20 pt-6 border-t-2 border-gray-200 text-center text-xs font-bold uppercase text-gray-400">Generated by EduPod AI | Learning Redefined</div>
-                </div>
-            </div>
         </div>
     );
 };

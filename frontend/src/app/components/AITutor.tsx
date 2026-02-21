@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { motion } from "framer-motion";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import axios from "axios";
@@ -13,6 +14,14 @@ interface Message {
 interface AITutorProps {
     jobId: string;
 }
+
+const formatAssistantText = (text: string) => {
+    return text
+        .replace(/\r/g, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .replace(/\*\*\s+\*\*/g, "")
+        .trim();
+};
 
 const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
     const [messages, setMessages] = useState<Message[]>([
@@ -28,6 +37,21 @@ const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
         }
     }, [messages]);
 
+    const buildHistoryPairs = (source: Message[]) => {
+        const pairs: [string, string][] = [];
+        for (const msg of source.slice(-10)) {
+            if (msg.role === "user") {
+                pairs.push([msg.content, ""]);
+                continue;
+            }
+
+            if (!pairs.length) continue;
+            const last = pairs[pairs.length - 1];
+            if (!last[1]) last[1] = msg.content;
+        }
+        return pairs;
+    };
+
     const handleSend = async () => {
         if (!input.trim() || loading) return;
 
@@ -37,15 +61,16 @@ const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
         setLoading(true);
 
         try {
-            const history = messages.slice(-6).map((m) => [m.content, ""]);
+            const history = buildHistoryPairs(messages);
             const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8005";
             const res = await axios.post(`${BACKEND_URL}/ask_tutor`, {
                 job_id: jobId,
                 question: userMsg,
-                history: history,
+                history,
             });
 
-            setMessages((prev) => [...prev, { role: "ai", content: res.data.answer }]);
+            const answer = typeof res.data?.answer === "string" ? res.data.answer : "I could not generate a response right now.";
+            setMessages((prev) => [...prev, { role: "ai", content: answer }]);
         } catch {
             setMessages((prev) => [...prev, { role: "ai", content: "Sorry, I had trouble connecting. Please try again." }]);
         } finally {
@@ -78,13 +103,19 @@ const AITutor: React.FC<AITutorProps> = ({ jobId }) => {
                         </div>
                         <div
                             className={`
-                            max-w-[88%] sm:max-w-[80%] p-3 sm:p-5 text-sm font-bold leading-relaxed border-2 border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)]
+                            max-w-[88%] sm:max-w-[80%] p-3 sm:p-5 text-sm leading-relaxed border-2 border-[var(--border-main)] shadow-[4px_4px_0px_0px_var(--border-main)]
                             ${msg.role === "ai"
-                                ? "bg-[var(--bg-card)] text-[var(--text-main)] rounded-tr-xl rounded-br-xl rounded-bl-xl"
-                                : "bg-[var(--text-main)] text-[var(--bg-main)] rounded-tl-xl rounded-bl-xl rounded-br-xl"}
+                                    ? "bg-[var(--bg-card)] text-[var(--text-main)] rounded-tr-xl rounded-br-xl rounded-bl-xl"
+                                    : "bg-[var(--text-main)] text-[var(--bg-main)] rounded-tl-xl rounded-bl-xl rounded-br-xl"}
                         `}
                         >
-                            {msg.content}
+                            {msg.role === "ai" ? (
+                                <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-[var(--text-main)]">
+                                    <ReactMarkdown>{formatAssistantText(msg.content)}</ReactMarkdown>
+                                </div>
+                            ) : (
+                                <p className="font-bold whitespace-pre-wrap">{msg.content}</p>
+                            )}
                         </div>
                     </motion.div>
                 ))}

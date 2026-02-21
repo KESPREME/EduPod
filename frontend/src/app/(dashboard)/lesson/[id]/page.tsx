@@ -54,6 +54,227 @@ interface QuizQuestionItem {
     explanation: string;
 }
 
+const QUIZ_OPTION_LABELS = ["A", "B", "C", "D"] as const;
+const STOP_WORDS = new Set([
+    "about", "after", "also", "and", "are", "because", "been", "before", "being", "between",
+    "both", "could", "does", "from", "have", "into", "just", "more", "most", "only", "other",
+    "over", "some", "such", "than", "that", "their", "there", "these", "they", "this", "those",
+    "through", "under", "very", "what", "when", "where", "which", "while", "with", "would",
+    "your", "from", "were", "will", "them"
+]);
+
+const normalizeWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
+
+const toRecord = (value: unknown): Record<string, unknown> | null => {
+    if (!value || typeof value !== "object") return null;
+    return value as Record<string, unknown>;
+};
+
+const stripOptionPrefix = (value: string) => value.replace(/^[A-D][.)]\s*/i, "");
+
+const extractSourceText = (metadata: TranscriptSegment[] | null, notes: string) => {
+    const transcriptText = metadata?.map((segment) => segment.content).join(" ") ?? "";
+    return normalizeWhitespace(`${notes} ${transcriptText}`);
+};
+
+const splitSentences = (text: string) =>
+    text
+        .split(/(?<=[.!?])\s+/)
+        .map((sentence) => normalizeWhitespace(sentence))
+        .filter((sentence) => sentence.length >= 35 && sentence.length <= 220);
+
+const sentenceToTerm = (sentence: string, fallbackIndex: number) => {
+    const words = sentence
+        .replace(/[^a-zA-Z0-9\s]/g, " ")
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((word) => word.length > 3 && !STOP_WORDS.has(word))
+        .slice(0, 3);
+
+    if (!words.length) return `Concept ${fallbackIndex + 1}`;
+    return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+};
+
+const buildFallbackFlashcards = (metadata: TranscriptSegment[] | null, notes: string): FlashcardItem[] => {
+    const sourceText = extractSourceText(metadata, notes);
+    const sentences = splitSentences(sourceText);
+    const cards: FlashcardItem[] = [];
+    const seenTerms = new Set<string>();
+
+    for (const sentence of sentences) {
+        const term = sentenceToTerm(sentence, cards.length);
+        const dedupeKey = term.toLowerCase();
+        if (seenTerms.has(dedupeKey)) continue;
+        seenTerms.add(dedupeKey);
+        cards.push({ term, definition: sentence });
+        if (cards.length >= 8) break;
+    }
+
+    return cards;
+};
+
+const normalizeFlashcards = (raw: unknown, metadata: TranscriptSegment[] | null, notes: string): FlashcardItem[] => {
+    const candidates = Array.isArray(raw) ? raw : [];
+    const normalized: FlashcardItem[] = [];
+    const seenTerms = new Set<string>();
+
+    for (const candidate of candidates) {
+        const record = toRecord(candidate);
+        if (!record) continue;
+        const term = normalizeWhitespace(
+            String(record.term ?? record.title ?? record.front ?? record.keyword ?? "")
+        );
+        const definition = normalizeWhitespace(
+            String(record.definition ?? record.back ?? record.answer ?? record.explanation ?? "")
+        );
+
+        if (!term || !definition) continue;
+        if (/^(error|null|undefined|term)$/i.test(term)) continue;
+        if (/^(error|null|undefined)$/i.test(definition)) continue;
+
+        const dedupeKey = term.toLowerCase();
+        if (seenTerms.has(dedupeKey)) continue;
+        seenTerms.add(dedupeKey);
+        normalized.push({ term, definition });
+    }
+
+    if (normalized.length >= 4) return normalized.slice(0, 16);
+
+    const fallbackCards = buildFallbackFlashcards(metadata, notes);
+    if (fallbackCards.length) return fallbackCards;
+
+    return normalized;
+};
+
+const parseCorrectLetter = (record: Record<string, unknown>, cleanOptions: string[]): string => {
+    const directValue = record.correct ?? record.correct_answer ?? record.answer;
+
+    if (typeof directValue === "number") {
+        const idx = Math.max(0, Math.min(cleanOptions.length - 1, directValue));
+        return QUIZ_OPTION_LABELS[idx] ?? "A";
+    }
+
+    if (typeof directValue === "string") {
+        const clean = directValue.trim();
+        const firstChar = clean.charAt(0).toUpperCase();
+        if (QUIZ_OPTION_LABELS.includes(firstChar as (typeof QUIZ_OPTION_LABELS)[number])) {
+            return firstChar;
+        }
+
+        const optionIdx = cleanOptions.findIndex((option) => option.toLowerCase() === clean.toLowerCase());
+        if (optionIdx >= 0) return QUIZ_OPTION_LABELS[optionIdx] ?? "A";
+    }
+
+    return "A";
+};
+
+const buildFallbackQuiz = (
+    flashcards: FlashcardItem[],
+    metadata: TranscriptSegment[] | null,
+    notes: string
+): QuizQuestionItem[] => {
+    const sourceCards = flashcards.length ? flashcards : buildFallbackFlashcards(metadata, notes);
+    const cardPool = sourceCards.slice(0, 6);
+    const quizItems: QuizQuestionItem[] = [];
+
+    for (let index = 0; index < cardPool.length && quizItems.length < 4; index++) {
+        const card = cardPool[index];
+        const distractors = cardPool
+            .filter((candidate) => candidate.term !== card.term)
+            .map((candidate) => normalizeWhitespace(candidate.definition))
+            .filter(Boolean)
+            .slice(0, 3);
+
+        if (!distractors.length) continue;
+
+        const optionsText = [
+            normalizeWhitespace(card.definition),
+            ...distractors
+        ].slice(0, 4);
+
+        while (optionsText.length < 4) {
+            optionsText.push(`Not related to ${card.term.toLowerCase()}.`);
+        }
+
+        const orderedOptions = optionsText.map((option) =>
+            option.length > 120 ? `${option.slice(0, 117)}...` : option
+        );
+
+        const correctLetter = QUIZ_OPTION_LABELS[0];
+        const prefixedOptions = orderedOptions.map((option, optionIdx) => `${QUIZ_OPTION_LABELS[optionIdx]}) ${option}`);
+
+        quizItems.push({
+            question: `What best describes "${card.term}"?`,
+            options: prefixedOptions,
+            correct: correctLetter,
+            explanation: card.definition
+        });
+    }
+
+    return quizItems;
+};
+
+const normalizeQuiz = (
+    raw: unknown,
+    flashcards: FlashcardItem[],
+    metadata: TranscriptSegment[] | null,
+    notes: string
+): QuizQuestionItem[] => {
+    const candidates = Array.isArray(raw) ? raw : [];
+    const normalized: QuizQuestionItem[] = [];
+    const seenQuestions = new Set<string>();
+
+    for (const candidate of candidates) {
+        const record = toRecord(candidate);
+        if (!record) continue;
+
+        const question = normalizeWhitespace(String(record.question ?? record.prompt ?? ""));
+        if (!question) continue;
+
+        const rawOptionsValue = record.options;
+        let rawOptions: string[] = [];
+        if (Array.isArray(rawOptionsValue)) {
+            rawOptions = rawOptionsValue.map((option) => normalizeWhitespace(String(option)));
+        } else if (rawOptionsValue && typeof rawOptionsValue === "object") {
+            rawOptions = Object.values(rawOptionsValue as Record<string, unknown>).map((option) => normalizeWhitespace(String(option)));
+        }
+
+        const cleanOptions = rawOptions
+            .map(stripOptionPrefix)
+            .filter(Boolean)
+            .slice(0, 4);
+
+        if (cleanOptions.length < 2) continue;
+
+        const dedupeKey = question.toLowerCase();
+        if (seenQuestions.has(dedupeKey)) continue;
+        seenQuestions.add(dedupeKey);
+
+        const prefixedOptions = cleanOptions.map((option, idx) => `${QUIZ_OPTION_LABELS[idx]}) ${option}`);
+        const correct = parseCorrectLetter(record, cleanOptions);
+        const explanation = normalizeWhitespace(String(record.explanation ?? record.reason ?? `The best answer is ${correct}.`));
+
+        normalized.push({
+            question,
+            options: prefixedOptions,
+            correct,
+            explanation
+        });
+    }
+
+    const looksGeneric = normalized.some((item) =>
+        /main topic discussed in this podcast/i.test(item.question) ||
+        item.options.some((option) => /cooking recipes|sports news|weather forecast/i.test(option))
+    );
+
+    if (normalized.length >= 3 && !looksGeneric) {
+        return normalized;
+    }
+
+    const fallbackQuiz = buildFallbackQuiz(flashcards, metadata, notes);
+    return fallbackQuiz.length ? fallbackQuiz : normalized;
+};
+
 export default function LessonPage() {
     const params = useParams();
     const router = useRouter();
@@ -177,11 +398,19 @@ export default function LessonPage() {
                 else if (currentStatus === "Completed") setStatusStep(4);
 
                 if (currentStatus === "Completed") {
+                    const responseData = response.data as Record<string, unknown>;
+                    const metadataData = Array.isArray(responseData.metadata)
+                        ? (responseData.metadata as TranscriptSegment[])
+                        : null;
+                    const notesData = typeof responseData.notes === "string" ? responseData.notes : "";
+                    const normalizedFlashcards = normalizeFlashcards(responseData.flashcards, metadataData, notesData);
+                    const normalizedQuiz = normalizeQuiz(responseData.quiz, normalizedFlashcards, metadataData, notesData);
+
                     setAudioUrl(`${BACKEND_URL}/download/${jobId}`);
-                    setMetadata(response.data.metadata);
-                    if (response.data.flashcards) setFlashcards(response.data.flashcards);
-                    if (response.data.quiz) setQuiz(response.data.quiz);
-                    if (response.data.notes) setNotes(response.data.notes);
+                    setMetadata(metadataData);
+                    setNotes(notesData);
+                    setFlashcards(normalizedFlashcards);
+                    setQuiz(normalizedQuiz);
                     if (intervalId) clearInterval(intervalId);
                 } else if (currentStatus.startsWith("Error")) {
                     setError(currentStatus);

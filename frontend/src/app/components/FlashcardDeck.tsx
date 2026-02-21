@@ -20,7 +20,15 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({ cards }) => {
     const [reviewCards, setReviewCards] = useState<number[]>([]);
     const [direction, setDirection] = useState(0);
 
-    const currentCard = cards[currentIndex];
+    if (!cards.length) {
+        return (
+            <div className="w-full max-w-xl mx-auto text-center py-16 border-2 border-[var(--border-main)] bg-[var(--bg-card)] shadow-[6px_6px_0px_var(--border-main)]">
+                <p className="font-black uppercase tracking-widest text-[var(--text-muted)]">Flashcards are being prepared...</p>
+            </div>
+        );
+    }
+
+    const currentCard = cards[currentIndex] ?? cards[0];
     const progress = Math.round(((knownCards.length + reviewCards.length) / cards.length) * 100);
 
     const handleFlip = () => setIsFlipped(!isFlipped);

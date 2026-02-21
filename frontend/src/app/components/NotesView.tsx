@@ -9,15 +9,65 @@ interface NotesViewProps {
     notes: string;
 }
 
+/**
+ * Strips emoji, dingbats, symbols, and other non-Latin characters that
+ * jsPDF's built-in helvetica font cannot render (they appear as garbled Ø=ÜØ).
+ */
+const stripEmojisAndSymbols = (text: string): string => {
+    return text
+        // Remove emoji (Unicode emoji ranges)
+        .replace(/[\u{1F600}-\u{1F64F}]/gu, "")   // Emoticons
+        .replace(/[\u{1F300}-\u{1F5FF}]/gu, "")   // Misc Symbols & Pictographs
+        .replace(/[\u{1F680}-\u{1F6FF}]/gu, "")   // Transport & Map Symbols
+        .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, "")   // Flags
+        .replace(/[\u{2600}-\u{26FF}]/gu, "")      // Misc symbols
+        .replace(/[\u{2700}-\u{27BF}]/gu, "")      // Dingbats
+        .replace(/[\u{FE00}-\u{FE0F}]/gu, "")      // Variation selectors
+        .replace(/[\u{200D}]/gu, "")                // Zero width joiner
+        .replace(/[\u{20E3}]/gu, "")                // Enclosing keycap
+        .replace(/[\u{1F900}-\u{1F9FF}]/gu, "")   // Supplemental Symbols
+        .replace(/[\u{1FA00}-\u{1FA6F}]/gu, "")   // Chess Symbols
+        .replace(/[\u{1FA70}-\u{1FAFF}]/gu, "")   // Symbols Extended-A
+        .replace(/[\u{231A}-\u{231B}]/gu, "")      // Watch/Hourglass
+        .replace(/[\u{23E9}-\u{23F3}]/gu, "")      // Media controls
+        .replace(/[\u{23F8}-\u{23FA}]/gu, "")      // More media controls
+        .replace(/[\u{25AA}-\u{25AB}]/gu, "")      // Squares
+        .replace(/[\u{25B6}]/gu, "")                // Play button
+        .replace(/[\u{25C0}]/gu, "")                // Reverse button
+        .replace(/[\u{25FB}-\u{25FE}]/gu, "")      // Squares
+        .replace(/[\u{2934}-\u{2935}]/gu, "")      // Arrows
+        .replace(/[\u{2B05}-\u{2B07}]/gu, "")      // Arrows
+        .replace(/[\u{2B1B}-\u{2B1C}]/gu, "")      // Squares
+        .replace(/[\u{2B50}]/gu, "")                // Star
+        .replace(/[\u{2B55}]/gu, "")                // Circle
+        .replace(/[\u{3030}]/gu, "")                // Wavy dash
+        .replace(/[\u{303D}]/gu, "")                // Part alternation mark
+        .replace(/[\u{3297}]/gu, "")                // Circled Ideograph Congratulation
+        .replace(/[\u{3299}]/gu, "")                // Circled Ideograph Secret
+        .trim();
+};
+
 const markdownToPlainText = (markdown: string) => {
     return markdown
+        // Strip code blocks
         .replace(/```[\s\S]*?```/g, (match) => match.replace(/```/g, "").trim())
+        // Convert markdown headers (potentially with emojis) to plain uppercase
         .replace(/^#{1,6}\s+/gm, "")
+        // Remove bold formatting (** and __)
         .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/__(.*?)__/g, "$1")
+        // Remove italic formatting (* and _)
         .replace(/\*(.*?)\*/g, "$1")
+        .replace(/_(.*?)_/g, "$1")
+        // Remove any remaining stray asterisks
+        .replace(/\*/g, "")
+        // Inline code
         .replace(/`([^`]+)`/g, "$1")
+        // Links
         .replace(/\[(.*?)\]\((.*?)\)/g, "$1 ($2)")
+        // List items
         .replace(/^\s*[-*+]\s+/gm, "- ")
+        // Clean up whitespace
         .replace(/\r/g, "")
         .replace(/\n{3,}/g, "\n\n")
         .trim();
@@ -34,7 +84,10 @@ const NotesView: React.FC<NotesViewProps> = ({ notes }) => {
         setPdfError(null);
 
         try {
-            const plainText = markdownToPlainText(notes);
+            // Convert markdown to plain text, then strip any emoji/symbols 
+            // that jsPDF's helvetica font can't render
+            const rawPlainText = markdownToPlainText(notes);
+            const plainText = stripEmojisAndSymbols(rawPlainText);
             if (!plainText) {
                 throw new Error("No note content available for PDF export.");
             }

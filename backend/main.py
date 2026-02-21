@@ -164,7 +164,7 @@ async def process_job(job_id: str, file_path: str, language: str, voices: dict, 
         # Generate auxiliary learning materials
         update_job(job_id, {"status": "Generating quiz, flashcards & notes..."})
         
-        quiz_data = generate_quiz(script)
+        quiz_data = generate_quiz(text)
         flashcards_data = generate_flashcards(text)
         notes_data = generate_notes(text)
         
@@ -195,7 +195,8 @@ async def process_job(job_id: str, file_path: str, language: str, voices: dict, 
             "metadata": metadata,
             "quiz": quiz_data,
             "flashcards": flashcards_data,
-            "notes": notes_data
+            "notes": notes_data,
+            "source_text": text
         })
         
         print(f"✅ Job {job_id[:8]} completed successfully!")
@@ -242,11 +243,11 @@ async def get_transcript(job_id: str):
 async def get_quiz(job_id: str):
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    if "script" not in jobs[job_id]:
-        raise HTTPException(status_code=400, detail="Script not ready yet")
+    if "script" not in jobs[job_id] and "source_text" not in jobs[job_id]:
+        raise HTTPException(status_code=400, detail="Content not ready yet")
     
-    script = jobs[job_id]["script"]
-    quiz = generate_quiz(script)
+    text = jobs[job_id].get("source_text", jobs[job_id].get("script", ""))
+    quiz = generate_quiz(text)
     return {"quiz": quiz}
 
 @app.post("/generate_video/{job_id}")

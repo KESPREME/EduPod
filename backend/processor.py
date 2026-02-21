@@ -93,33 +93,43 @@ def generate_script(text: str, language: str = "en", tts_provider: str = "azure"
     return invoke_llm(prompt, max_tokens=4096, temperature=0.8)
 
 
-def generate_quiz(script: str, num_questions: int = 5) -> list:
+def generate_quiz(text: str, num_questions: int = 5) -> list:
     """
-    Generates multiple choice questions from the podcast script.
+    Generates multiple choice questions from the source text.
     """
     prompt = f"""
-    Based on the following podcast script, generate {num_questions} multiple choice questions to test understanding.
-    
-    Format your response as a JSON array with this structure:
+    You are an expert educator creating a quiz to test a student's understanding of the material below.
+    Generate exactly {num_questions} multiple choice questions.
+
+    CRITICAL RULES:
+    - Questions MUST be about the specific concepts, facts, and ideas in the text below.
+    - Do NOT ask generic or meta questions like "What was the main topic?" or "What did the text discuss?"
+    - Each question should test comprehension of a SPECIFIC concept from the text.
+    - Do NOT use asterisks (*), markdown formatting, or emoji in any field.
+    - Write all text in plain language.
+    - Each option must be clearly distinct. The correct answer must be unambiguously correct.
+    - Distractors (wrong answers) should be plausible but clearly incorrect to someone who read the material.
+
+    Format your response as a JSON array with this exact structure:
     [
         {{
-            "question": "The question text",
+            "question": "Clear, specific question about a concept from the text",
             "options": ["A) First option", "B) Second option", "C) Third option", "D) Fourth option"],
             "correct": "A",
-            "explanation": "Brief explanation of why this answer is correct"
+            "explanation": "Brief explanation of why this is correct, referencing the source material"
         }}
     ]
-    
-    Only output the JSON array, nothing else. Make sure to generate exactly {num_questions} items.
-    
-    Podcast Script:
-    {script[:3000]}
-    
+
+    Only output the JSON array, nothing else. Generate exactly {num_questions} items.
+
+    Source Material:
+    {text[:5000]}
+
     Quiz Questions (JSON):
     """
-    
+
     response = invoke_llm_json(prompt)
-    
+
     # Try to parse JSON, fallback to empty list
     try:
         start_idx = response.find('[')
@@ -130,16 +140,8 @@ def generate_quiz(script: str, num_questions: int = 5) -> list:
             return quiz
     except Exception:
         pass
-    
-    # Fallback quiz if parsing fails
-    return [
-        {
-            "question": "What was the main topic discussed in this podcast?",
-            "options": ["A) The content of the PDF", "B) Cooking recipes", "C) Sports news", "D) Weather forecast"],
-            "correct": "A",
-            "explanation": "The podcast was generated from the uploaded PDF content."
-        }
-    ]
+
+    return []
 
 
 def generate_flashcards(text: str, num_flashcards: int = 8) -> list:
@@ -147,32 +149,41 @@ def generate_flashcards(text: str, num_flashcards: int = 8) -> list:
     Generates flashcards (Term/Definition) from the text.
     """
     prompt = f"""
-    Extract {num_flashcards} key terms and their definitions from the text below for study flashcards.
-    
+    You are an expert educator creating study flashcards from the material below.
+    Extract exactly {num_flashcards} important terms, concepts, or key ideas and provide clear definitions.
+
+    CRITICAL RULES:
+    - Each "term" should be a specific concept, keyword, or phrase directly from the text (2-5 words max).
+    - Each "definition" should be a complete, self-contained sentence that explains the term.
+    - Do NOT use asterisks (*), markdown formatting, or emoji anywhere.
+    - Do NOT include generic terms like "Introduction" or "Conclusion".
+    - Focus on the most important and specific ideas in the material.
+    - Write in plain language without any special characters.
+
     Format your response as a JSON array:
     [
         {{
-            "term": "Term 1",
-            "definition": "Clear, concise definition."
+            "term": "Specific Term",
+            "definition": "A clear, complete sentence defining or explaining this term."
         }}
     ]
-    
-    Only output the JSON array. Make sure to generate exactly {num_flashcards} items.
-    
-    Text:
-    {text[:4000]}
-    
+
+    Only output the JSON array. Generate exactly {num_flashcards} items.
+
+    Source Material:
+    {text[:5000]}
+
     Flashcards (JSON):
     """
-    
+
     response = invoke_llm_json(prompt)
-    
+
     try:
         start_idx = response.find('[')
         end_idx = response.rfind(']') + 1
         return json.loads(response[start_idx:end_idx])
     except Exception:
-        return [{"term": "Error", "definition": "Could not generate flashcards."}]
+        return []
 
 
 def generate_notes(text: str) -> str:
@@ -181,16 +192,33 @@ def generate_notes(text: str) -> str:
     """
     prompt = f"""
     Create structured study notes from the following text.
-    Use Markdown formatting.
-    Include:
-    1. 🎯 **Summary**: A brief overview (2-3 sentences).
-    2. 🔑 **Key Concepts**: Bullet points of main ideas.
-    3. 🧠 **Deep Dive**: Detailed explanation of the most complex topic.
-    4. 💡 **Takeaway**: One practical application or insight.
-    
-    Text:
+    Use simple Markdown formatting (## for headers, - for bullet points).
+
+    CRITICAL RULES:
+    - Do NOT use emoji or special Unicode characters anywhere.
+    - Do NOT use asterisks (*) for emphasis or bold. Use plain text only.
+    - Do NOT use decorative symbols or special characters.
+    - Keep all text in plain, readable English.
+    - Section headers should be plain text with ## prefix.
+
+    Structure the notes as follows:
+    ## Summary
+    A brief overview of the material in 2-3 sentences.
+
+    ## Key Concepts
+    - Bullet points covering the main ideas and important facts.
+    - Each bullet should be a complete, clear statement.
+
+    ## Deep Dive
+    A detailed explanation of the most complex or important topic from the material.
+    Use multiple paragraphs if needed.
+
+    ## Key Takeaway
+    One practical application, insight, or important conclusion from the material.
+
+    Source Material:
     {text[:5000]}
-    
+
     Study Notes:
     """
     return invoke_llm(prompt, max_tokens=2048)

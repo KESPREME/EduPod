@@ -63,7 +63,7 @@ const STOP_WORDS = new Set([
     "your", "from", "were", "will", "them"
 ]);
 
-const normalizeWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
+const normalizeWhitespace = (value: string) => value.replace(/\s+/g, " ").replace(/\*/g, "").trim();
 
 const toRecord = (value: unknown): Record<string, unknown> | null => {
     if (!value || typeof value !== "object") return null;

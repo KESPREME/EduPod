@@ -91,16 +91,17 @@ const FlashcardDeck: React.FC<FlashcardDeckProps> = ({ cards }) => {
                 <motion.div
                     key={currentIndex}
                     initial={{ x: direction * 50, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
+                    animate={{ x: 0, opacity: 1, rotateY: isFlipped ? 180 : 0 }}
                     exit={{ x: -direction * 50, opacity: 0 }}
+                    transition={{ duration: 0.5 }}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
                     dragSnapToOrigin
                     onDragEnd={handleDrag}
                     onTap={handleFlip}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full h-full cursor-pointer relative preserve-3d transition-transform duration-500"
-                    style={{ transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)", transformStyle: "preserve-3d" }}
+                    className="w-full h-full cursor-pointer relative"
+                    style={{ transformStyle: "preserve-3d" }}
                 >
                     <div className="absolute inset-0 backface-hidden">
                         <div className="h-full w-full bg-[var(--bg-card)] border-4 border-[var(--border-main)] shadow-[12px_12px_0px_0px_var(--border-main)] p-4 sm:p-8 flex flex-col items-center justify-center text-center hover:shadow-[16px_16px_0px_0px_var(--primary)] transition-shadow">

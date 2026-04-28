@@ -71,4 +71,4 @@ htmlcov/
 
 # dotenv example should be kept (optional)
 # If you WANT to track .env.example, keep it unignored:
-!.env.example
+.env.example

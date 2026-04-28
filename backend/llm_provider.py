@@ -2,7 +2,9 @@
 LLM Provider Module - OpenRouter Integration
 Uses the OpenAI-compatible API via OpenRouter to access Step 3.5 Flash (free tier).
 """
+
 import os
+
 from openai import OpenAI
 
 # Lazy-initialized client
@@ -28,18 +30,18 @@ def _get_client() -> OpenAI:
 
 
 # Model to use — stepfun/step-3.5-flash:free on OpenRouter
-MODEL_ID = "stepfun/step-3.5-flash:free"
+MODEL_ID = "tencent/hy3-preview:free"
 
 
 def invoke_llm(prompt: str, max_tokens: int = 4096, temperature: float = 0.7) -> str:
     """
     Send a prompt to the LLM via OpenRouter and return the response text.
-    
+
     Args:
         prompt: The full prompt text
         max_tokens: Maximum response length
         temperature: Creativity level (0.0 = deterministic, 1.0 = creative)
-    
+
     Returns:
         The model's response text
     """
@@ -64,11 +66,11 @@ def invoke_llm(prompt: str, max_tokens: int = 4096, temperature: float = 0.7) ->
 def invoke_llm_json(prompt: str, max_tokens: int = 2048) -> str:
     """
     Send a prompt expecting JSON output. Uses lower temperature for structured output.
-    
+
     Args:
         prompt: The full prompt text (should instruct model to output JSON)
         max_tokens: Maximum response length
-    
+
     Returns:
         The model's response text (should be JSON parseable)
     """

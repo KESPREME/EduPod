@@ -9,3 +9,66 @@ venv/
 # Python cache
 __pycache__/
 *.py[cod]
+
+.env
+.env.example
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+.env.*
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# Uploads / generated files
+uploads/
+output/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Mypy / type checking
+.mypy_cache/
+
+# Pyre / static analysis
+.pyre/
+
+# Ruff / lint cache
+.ruff_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# dotenv example should be kept (optional)
+# If you WANT to track .env.example, keep it unignored:
+!.env.example
